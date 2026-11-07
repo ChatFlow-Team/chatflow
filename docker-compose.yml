@@ -1,0 +1,18 @@
+services:
+  chaflow-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: chaflow-socket-server
+    ports:
+      - "5050:5050"
+    environment:
+      CHAFLOW_PORT: "5050"
+      CHAFLOW_DATA_DIR: /app/data
+    volumes:
+      - chaflow-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  chaflow-data:
+    name: chaflow-data
