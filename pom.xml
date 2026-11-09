@@ -34,14 +34,6 @@
                     <mainClass>com.chaflow.client/com.chaflow.client.ChaFlowApp</mainClass>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.6.4</version>
-                <configuration>
-                    <mainClass>com.chaflow.MainApp</mainClass>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 </project>
