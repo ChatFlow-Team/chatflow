@@ -15,6 +15,7 @@ public class ChaFlowApp extends Application {
     @Override
     public void start(Stage stage) {
         Label logo = new Label("ChaFlow");
+        // test ammend commit
         logo.setFont(Font.font("Arial", 34));
         logo.setStyle("-fx-font-weight: bold; -fx-text-fill: #16a085;");
 
