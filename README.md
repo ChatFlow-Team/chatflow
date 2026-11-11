@@ -1,58 +1,71 @@
-# ChaFlow — corrected starter project
+# ChaFlow
 
-Java 21 + JavaFX desktop client, Java TCP socket server, Docker and persistent named volume.
+Client JavaFX 21, serveur TCP Java et données persistantes avec Docker Compose.
 
-## Requirements
-- JDK 21
-- Maven 3.9+
-- Docker Engine and Docker Compose plugin
+## Démarrage complet (macOS, Linux et Windows)
 
-## 1. Start the server
-Run from the project root (the folder containing docker-compose.yml):
+Prérequis : Docker Desktop démarré (ou Docker Engine avec le plugin Compose)
+et un navigateur. Aucun JDK, Maven ou serveur X local n'est nécessaire.
+
+Depuis la racine du dépôt :
+
+```bash
+docker compose up --build
+```
+
+Compose construit et lance automatiquement le serveur et le frontend JavaFX.
+Le frontend attend que le serveur TCP soit disponible. Ouvrir ensuite :
+
+<http://localhost:6080/vnc.html?autoconnect=true&resize=scale>
+
+La fenêtre JavaFX s'affiche dans le navigateur via noVNC. Elle doit présenter
+« Welcome to ChaFlow! » et « Connected · ChaFlow server is ready! ».
+La souris et le clavier pilotent le bureau du conteneur : on peut déplacer,
+redimensionner ou maximiser la fenêtre. Le rendu logiciel fonctionne aussi
+sur Mac Apple Silicon, sans accès au GPU de l'hôte. Le frontend utilise
+`linux/amd64` (émulé par Docker Desktop sur Apple Silicon), car JavaFX 21.0.6
+ne publie pas les artefacts Linux ARM64 dans Maven Central. Le premier build
+peut donc prendre quelques minutes. L'interface actuelle est
+un écran d'accueil avec statut de connexion, sans saisie de messages.
+
+Le port d'affichage `6080` est publié uniquement sur `127.0.0.1`.
+Le serveur reste accessible sur le port TCP `5050`. Le frontend utilise le
+nom Compose `chaflow-server`, pas le localhost du conteneur.
+
+Pour démarrer en arrière-plan et vérifier l'état :
 
 ```bash
 docker compose up --build -d
 docker compose ps
-docker compose logs -f chaflow-server
+docker compose logs chaflow-frontend chaflow-server
 ```
 
-The server listens on TCP port 5050. The named Docker volume `chaflow-data`
-persists `/app/data/server.log`.
+Pour relancer uniquement l'interface après avoir fermé sa fenêtre :
 
-Stop the container but keep the volume:
+```bash
+docker compose restart chaflow-frontend
+```
+
+Pour arrêter les services en conservant les données :
+
 ```bash
 docker compose down
 ```
 
-Delete the volume and its data (destructive):
-```bash
-docker compose down -v
-```
+Le volume nommé `chaflow-data` conserve `/app/data/server.log`.
+`docker compose down -v` supprime aussi ce volume et ses données.
 
-## 2. Run the JavaFX client
-In another terminal, from the project root:
+## Développement JavaFX local (facultatif)
 
-```bash
-mvn clean javafx:run
-```
+Avec JDK 21 et Maven 3.9+, `mvn clean javafx:run` lance le client local,
+qui utilise par défaut `127.0.0.1:5050`. Ce lancement n'est pas nécessaire
+pour le parcours Docker Compose.
 
-The window displays “Welcome to ChaFlow!” and reports whether the socket server answered.
+## Configuration du frontend
 
-## Structure
-```text
-ChaFlow/
-├── pom.xml
-├── docker-compose.yml
-├── src/main/java/
-│   ├── module-info.java
-│   └── com/chaflow/client/
-│       ├── ChaFlowApp.java
-│       └── SocketClient.java
-└── server/
-    ├── Dockerfile
-    ├── pom.xml
-    └── src/main/java/com/chaflow/server/SocketServer.java
-```
-
-Important: Docker Compose builds with `server/` as its context. Therefore
-`COPY src ./src` in `server/Dockerfile` correctly copies `server/src`.
+- `docker/frontend/Dockerfile` compile le client et embarque les bibliothèques
+  JavaFX Linux correspondant à l'architecture de construction.
+- `docker/frontend/start.sh` lance Xvfb, Openbox, x11vnc, noVNC et JavaFX ;
+  l'arrêt d'un de ces processus entraîne le redémarrage du conteneur.
+- `docker-compose.yml` configure les deux services, leur ordre de démarrage,
+  leurs contrôles de santé et le volume persistant.
