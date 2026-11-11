@@ -1,0 +1,43 @@
+
+name: ChatFlow CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    name: Build ChatFlow
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Build JavaFX client (root)
+      - name: Build JavaFX Client
+        run: mvn -B clean verify
+
+      # Build Java Socket server
+      - name: Build Socket Server
+        run: mvn -B -f server/pom.xml clean verify
+
+      # Save generated JAR files
+      - name: Upload ChatFlow artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ChatFlow-build
+          path: |
+            target/*.jar
+            server/target/*.jar
+          if-no-files-found: warn
