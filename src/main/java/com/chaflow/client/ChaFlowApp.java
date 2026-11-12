@@ -85,9 +85,15 @@ public class ChaFlowApp extends Application {
     private void showWelcome(SocketClient.AuthResult account) {
         Label heading = new Label("Welcome to ChaFlow, " + account.displayName() + "!");
         heading.setFont(Font.font("Arial", 24));
+        heading.setWrapText(true);
+        heading.setMaxWidth(Double.MAX_VALUE);
+        heading.setAlignment(Pos.CENTER);
         heading.setStyle("-fx-text-fill: #16a085; -fx-font-weight: bold;");
         Label detail = new Label("Signed in as @" + account.username() + "\nAccount ID: " + account.userId());
         detail.setStyle("-fx-text-fill: #475569; -fx-font-size: 14px;");
+        detail.setWrapText(true);
+        detail.setMaxWidth(Double.MAX_VALUE);
+        detail.setAlignment(Pos.CENTER);
         Button back = new Button("Back to sign in");
         back.setOnAction(event -> start((Stage) root.getScene().getWindow()));
         root.getChildren().setAll(heading, detail, back);

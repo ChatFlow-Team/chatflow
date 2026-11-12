@@ -39,7 +39,7 @@ Le serveur reste responsable de l'unicité du numéro et du pseudo.
 - Création réussie : accueil avec le nom et le pseudo renvoyés, retour à la connexion.
 - Navigation par le lien et au clavier ; défilement et fenêtre minimale.
 
-## Vérification réalisée
+## Vérification initiale (serveur simulé)
 
 - `mvn clean verify` et `git diff --check` : succès.
 - Test graphique JavaFX sur macOS (JDK 27 disponible, compilation Java 21) :
@@ -54,3 +54,22 @@ Le serveur reste responsable de l'unicité du numéro et du pseudo.
   doublon réel et connexion avec le compte créé restent à vérifier.
 - Base commune avec SCRUM-26 : main e3ec433, récupéré via le connecteur GitHub
   avec empreintes Git vérifiées après l'échec d'authentification du terminal.
+
+
+## Validation avec PostgreSQL — 12 novembre 2026
+
+- Docker Compose du dépôt démarré avec PostgreSQL 15 et le serveur réel sur 5050 ;
+  migrations V1/V2 réussies. Aucun volume existant supprimé, configuration inchangée.
+- `mvn clean verify`, `mvn javafx:run` et `git diff --check` : succès.
+- Test d'intégration JavaFX avec contrôles réels, sans simulation TCP : les cinq
+  champs obligatoires, confirmation différente et lien de retour à la connexion : succès.
+- Création réelle du compte fictif +999506842180 / qa_scrum25_506842180 (id 5),
+  confirmée par SELECT PostgreSQL ; mot de passe non stocké en clair.
+- Même numéro avec un pseudo différent : erreur serveur affichée, une seule ligne
+  en base pour ce numéro. Le compte a ensuite permis la connexion depuis SCRUM-26.
+- Correction du nom tronqué sur l'accueil : retour à la ligne du titre et des détails.
+  Après correction, suite rejouée avec +999506966735 / qa_scrum25_506966735 (id 7),
+  création et doublon revérifiés en base, capture de l'accueil inspectée : succès.
+- Tests sous macOS/JDK 27, compilation ciblée Java 21. Lancement Maven vérifié ;
+  les parcours sont automatisés par un lanceur JavaFX séparé.
+- Les comptes fictifs sont conservés dans la base locale ; aucune donnée supprimée.
