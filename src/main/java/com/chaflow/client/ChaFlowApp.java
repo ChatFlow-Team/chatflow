@@ -1,163 +1,144 @@
 package com.chaflow.client;
 
-import com.chaflow.client.controller.AuthController;
-import com.chaflow.client.controller.ChatController;
-import com.chaflow.client.controller.MessengerController;
-import com.chaflow.client.service.AuthService;
-import com.chaflow.client.service.ChatService;
-import com.chaflow.client.service.SocketService;
-import com.chaflow.client.view.LocalWebView;
-import com.chaflow.client.view.MessengerView;
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 public class ChaFlowApp extends Application {
-    private final SocketService socket = new SocketService();
-    private final AuthController authController = new AuthController(new AuthService(socket));
-    private final MessengerController messengerController = new MessengerController(new ChatService(socket));
-    private final ChatController chatController = new ChatController(new ChatService(socket));
-    private final ExecutorService io = Executors.newSingleThreadExecutor(action -> {
-        Thread thread = new Thread(action, "chatflow-network");
-        thread.setDaemon(true);
-        return thread;
-    });
-
-    private Stage stage;
-    private SocketClient.AuthResult account;
-    private LocalWebView authPage;
-    private MessengerView messengerView;
+    private final SocketClient socketClient = new SocketClient();
+    private Label status;
+    private VBox root;
 
     @Override
     public void start(Stage stage) {
-        this.stage = stage;
-        showAuth();
+        Label logo = new Label("ChaFlow");
+        logo.setFont(Font.font("Arial", 34));
+        logo.setStyle("-fx-font-weight: bold; -fx-text-fill: #16a085;");
+        Label subtitle = new Label("Connect with your people.");
+        subtitle.setStyle("-fx-text-fill: #64748b; -fx-font-size: 14px;");
+
+        Tab loginTab = new Tab("Sign in", createLoginForm());
+        Tab registerTab = new Tab("Create account", createRegistrationForm());
+        loginTab.setClosable(false);
+        registerTab.setClosable(false);
+        TabPane tabs = new TabPane(loginTab, registerTab);
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        tabs.setMaxWidth(390);
+
+        status = new Label("Make sure Docker services are running.");
+        status.setWrapText(true);
+        status.setMaxWidth(380);
+        status.setStyle("-fx-text-fill: #64748b; -fx-font-size: 12px;");
+
+        root = new VBox(12, logo, subtitle, tabs, status);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(30));
+        root.setStyle("-fx-background-color: #f7fafc;");
+
+        stage.setTitle("ChaFlow — Sign in");
+        stage.setScene(new Scene(root, 520, 560));
+        stage.setMinWidth(460);
+        stage.setMinHeight(520);
         stage.show();
     }
 
-    private void showAuth() {
-        showAuthPage("Connexion", new LocalWebView("login.html", new LoginActions()));
+    private VBox createLoginForm() {
+        TextField phone = field("Phone number (+212...)");
+        PasswordField password = new PasswordField();
+        password.setPromptText("Password");
+        Button submit = primaryButton("Sign in");
+        submit.setOnAction(event -> authenticate(submit, () -> socketClient.login(phone.getText(), password.getText())));
+        VBox form = new VBox(12, labelled("Phone number", phone), labelled("Password", password), submit);
+        form.setPadding(new Insets(22));
+        return form;
     }
 
-    private void showAuthPage(String title, LocalWebView page) {
-        if (authPage != null) authPage.detach();
-        authPage = page;
-        stage.setTitle("ChatFlow — " + title);
-        stage.setScene(new Scene(page.root(), 764, 604));
-        stage.sizeToScene();
-        page.root().requestFocus();
-    }
-
-    public final class LoginActions {
-        public void login(String phone, String password) {
-            LocalWebView page = authPage;
-            io.submit(() -> {
-                SocketClient.AuthResult result = authController.login(phone, password);
-                Platform.runLater(() -> {
-                    if (authPage != page) return;
-                    if (!result.successful()) {
-                        page.call("authFailed", loginError(result.message()));
-                        return;
-                    }
-
-                    account = result;
-                    page.call("authSucceeded", result.displayName());
-                    page.call("updateConversationSummary", -1);
-                    io.submit(() -> {
-                        try {
-                            int count = messengerController.conversations(result.token()).size();
-                            Platform.runLater(() -> page.call("updateConversationSummary", count));
-                        } catch (IOException ignored) {
-                            // The welcome screen can still open the messenger after a preview failure.
-                        }
-                    });
-                });
-            });
-        }
-
-        public void openRegistration() {
-            if (account == null) showRegistration();
-        }
-
-        public void openMessenger() {
-            if (account != null) showMessenger();
-        }
-    }
-
-    private static String loginError(String message) {
-        if ("Incorrect phone number or password.".equals(message)) {
-            return "Numéro de téléphone ou mot de passe incorrect.";
-        }
-        return message;
-    }
-
-    private void showRegistration() {
-        showAuthPage("Inscription", new LocalWebView("register.html", new RegistrationActions()));
-    }
-
-    public final class RegistrationActions {
-        public void register(String phone, String username, String displayName, String password) {
-            LocalWebView page = authPage;
-            io.submit(() -> {
-                SocketClient.AuthResult result = authController.register(phone, username, displayName, password);
-                Platform.runLater(() -> {
-                    if (authPage != page) return;
-                    if (result.successful()) {
-                        account = result;
-                        showMessenger();
-                    } else {
-                        page.call("registrationFailed", registrationError(result.message()));
-                    }
-                });
-            });
-        }
-
-        public void openLogin() {
-            showAuth();
-        }
-    }
-
-    private static String registrationError(String message) {
-        return switch (message) {
-            case "Phone number or username is already registered." ->
-                    "Ce numéro de téléphone ou ce pseudo est déjà utilisé.";
-            default -> message;
-        };
-    }
-
-    private void showMessenger() {
-        authPage.detach();
-        authPage = null;
-        messengerView = new MessengerView(account, authController, messengerController, chatController, io, () -> {
-            account = null;
-            messengerView = null;
-            showAuth();
+    private VBox createRegistrationForm() {
+        TextField displayName = field("Your name");
+        TextField username = field("username");
+        TextField phone = field("+212600000000");
+        PasswordField password = new PasswordField();
+        password.setPromptText("At least 8 characters");
+        PasswordField confirmation = new PasswordField();
+        confirmation.setPromptText("Repeat password");
+        Button submit = primaryButton("Create account");
+        submit.setOnAction(event -> {
+            if (!password.getText().equals(confirmation.getText())) {
+                showStatus("Passwords do not match.", false);
+                return;
+            }
+            authenticate(submit, () -> socketClient.register(phone.getText(), username.getText(), displayName.getText(), password.getText()));
         });
-        stage.setTitle("ChatFlow — Messagerie");
-        stage.setScene(new Scene(messengerView.root(), 1216, 680));
-        stage.sizeToScene();
-        stage.centerOnScreen();
+        VBox form = new VBox(9,
+                labelled("Display name", displayName), labelled("Username", username),
+                labelled("Phone number", phone), labelled("Password", password),
+                labelled("Confirm password", confirmation), submit);
+        form.setPadding(new Insets(18, 22, 18, 22));
+        return form;
     }
 
-    @Override
-    public void stop() {
-        if (authPage != null) authPage.detach();
-        SocketClient.AuthResult previous = account;
-        if (previous != null) {
-            Runnable closeEvents = messengerView != null ? messengerView.detach() : () -> {};
-            io.execute(() -> {
-                closeEvents.run();
-                authController.logout(previous.token());
+    private void authenticate(Button button, AuthCall call) {
+        button.setDisable(true);
+        showStatus("Contacting ChaFlow server…", true);
+        Thread thread = new Thread(() -> {
+            SocketClient.AuthResult result = call.run();
+            Platform.runLater(() -> {
+                button.setDisable(false);
+                if (result.successful()) showWelcome(result);
+                else showStatus(result.message(), false);
             });
-        }
-        io.shutdown();
+        }, "chaflow-auth-request");
+        thread.setDaemon(true);
+        thread.start();
     }
 
-    public static void main(String[] args) {
-        launch(args);
+    private void showWelcome(SocketClient.AuthResult account) {
+        Label heading = new Label("Welcome to ChaFlow, " + account.displayName() + "!");
+        heading.setFont(Font.font("Arial", 24));
+        heading.setStyle("-fx-text-fill: #16a085; -fx-font-weight: bold;");
+        Label detail = new Label("Signed in as @" + account.username() + "\nAccount ID: " + account.userId());
+        detail.setStyle("-fx-text-fill: #475569; -fx-font-size: 14px;");
+        Button back = new Button("Back to sign in");
+        back.setOnAction(event -> start((Stage) root.getScene().getWindow()));
+        root.getChildren().setAll(heading, detail, back);
     }
+
+    private void showStatus(String message, boolean neutral) {
+        status.setText(message);
+        status.setStyle(neutral
+                ? "-fx-text-fill: #64748b; -fx-font-size: 12px;"
+                : "-fx-text-fill: #b42318; -fx-font-size: 12px;");
+    }
+
+    private static TextField field(String prompt) {
+        TextField field = new TextField();
+        field.setPromptText(prompt);
+        field.setMaxWidth(Double.MAX_VALUE);
+        return field;
+    }
+
+    private static VBox labelled(String label, Control control) {
+        Label caption = new Label(label);
+        caption.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #334155;");
+        control.setMaxWidth(Double.MAX_VALUE);
+        return new VBox(5, caption, control);
+    }
+
+    private static Button primaryButton(String text) {
+        Button button = new Button(text);
+        button.setMaxWidth(Double.MAX_VALUE);
+        button.setStyle("-fx-background-color: #16a085; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 11 18 11 18;");
+        return button;
+    }
+
+    @FunctionalInterface
+    private interface AuthCall { SocketClient.AuthResult run(); }
+
+    public static void main(String[] args) { launch(args); }
 }
