@@ -3,3 +3,5 @@ target
 .idea
 .vscode
 *.iml
+*.sql
+repomix-output.xml
