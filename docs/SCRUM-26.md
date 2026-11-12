@@ -36,7 +36,7 @@ Les paramètres JVM chaflow.host et chaflow.port restent disponibles dans Socket
 L'appel LOGIN et le traitement asynchrone existants sont conservés.
 Cette branche part de main e3ec433 et ne contient pas le redesign de l'inscription.
 
-## Vérification réalisée
+## Vérification initiale (serveur simulé)
 
 - `mvn clean verify` et `git diff --check` : succès.
 - Test JavaFX exécuté sur macOS (JDK 27 disponible, compilation Java 21), avec
@@ -50,3 +50,20 @@ Cette branche part de main e3ec433 et ne contient pas le redesign de l'inscripti
 - La synchronisation SSH/HTTPS du terminal a échoué. Les objets manquants de main
   ont été récupérés par le connecteur GitHub et leurs empreintes Git vérifiées
   avant une avance rapide locale. Aucun changement d'URL d'origin.
+
+
+## Validation avec PostgreSQL — 12 novembre 2026
+
+- Docker Compose du dépôt démarré avec PostgreSQL 15 et le serveur réel sur 5050 ;
+  migrations Flyway V1/V2 réussies et volumes conservés.
+- `mvn clean verify`, `mvn javafx:run` et `git diff --check` : succès.
+- Test d'intégration JavaFX (contrôles réels, aucune simulation TCP) : champs
+  obligatoires, erreur après mot de passe incorrect, connexion avec le compte
+  fictif créé par SCRUM-25, accueil, retour à la connexion et lien inscription : succès.
+- Compte local vérifié : numéro +999506842180, pseudo qa_scrum25_506842180,
+  identifiant 5. PostgreSQL confirme EN_LIGNE et une date de dernière connexion.
+- Correction du nom tronqué sur l'accueil : le titre et les détails peuvent
+  revenir à la ligne. Rendu après correction inspecté par capture JavaFX.
+- Tests exécutés sous macOS/JDK 27, cible de compilation Java 21. Le lancement
+  Maven a été vérifié ; le test d'intégration utilise un lanceur JavaFX séparé.
+- Accès SSH rétabli par chargement de la clé dans l'agent utilisateur.
