@@ -14,6 +14,7 @@ public class ChaFlowApp extends Application {
     private final SocketClient socketClient = new SocketClient();
     private Label status;
     private VBox root;
+    private TabPane tabs;
 
     @Override
     public void start(Stage stage) {
@@ -27,9 +28,9 @@ public class ChaFlowApp extends Application {
         Tab registerTab = new Tab("Create account", createRegistrationForm());
         loginTab.setClosable(false);
         registerTab.setClosable(false);
-        TabPane tabs = new TabPane(loginTab, registerTab);
+        tabs = new TabPane(loginTab, registerTab);
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        tabs.setMaxWidth(390);
+        tabs.setMaxWidth(430);
 
         status = new Label("Make sure Docker services are running.");
         status.setWrapText(true);
@@ -42,21 +43,16 @@ public class ChaFlowApp extends Application {
         root.setStyle("-fx-background-color: #f7fafc;");
 
         stage.setTitle("ChaFlow — Sign in");
-        stage.setScene(new Scene(root, 520, 560));
+        stage.setScene(new Scene(root, 560, 760));
         stage.setMinWidth(460);
-        stage.setMinHeight(520);
+        stage.setMinHeight(720);
         stage.show();
     }
 
     private VBox createLoginForm() {
-        TextField phone = field("Phone number (+212...)");
-        PasswordField password = new PasswordField();
-        password.setPromptText("Password");
-        Button submit = primaryButton("Sign in");
-        submit.setOnAction(event -> authenticate(submit, () -> socketClient.login(phone.getText(), password.getText())));
-        VBox form = new VBox(12, labelled("Phone number", phone), labelled("Password", password), submit);
-        form.setPadding(new Insets(22));
-        return form;
+        return new LoginForm(
+                (button, phone, password) -> authenticate(button, () -> socketClient.login(phone, password)),
+                () -> tabs.getSelectionModel().select(1));
     }
 
     private VBox createRegistrationForm() {
