@@ -3,5 +3,5 @@ target/
 .vscode/
 *.iml
 .DS_Store
-*.sql
 repomix-output.xml
+.env
