@@ -14,6 +14,7 @@ public class ChaFlowApp extends Application {
     private final SocketClient socketClient = new SocketClient();
     private Label status;
     private VBox root;
+    private TabPane tabs;
 
     @Override
     public void start(Stage stage) {
@@ -27,9 +28,9 @@ public class ChaFlowApp extends Application {
         Tab registerTab = new Tab("Create account", createRegistrationForm());
         loginTab.setClosable(false);
         registerTab.setClosable(false);
-        TabPane tabs = new TabPane(loginTab, registerTab);
+        tabs = new TabPane(loginTab, registerTab);
         tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
-        tabs.setMaxWidth(390);
+        tabs.setMaxWidth(430);
 
         status = new Label("Make sure Docker services are running.");
         status.setWrapText(true);
@@ -42,9 +43,9 @@ public class ChaFlowApp extends Application {
         root.setStyle("-fx-background-color: #f7fafc;");
 
         stage.setTitle("ChaFlow — Sign in");
-        stage.setScene(new Scene(root, 520, 560));
+        stage.setScene(new Scene(root, 560, 760));
         stage.setMinWidth(460);
-        stage.setMinHeight(520);
+        stage.setMinHeight(720);
         stage.show();
     }
 
@@ -60,27 +61,10 @@ public class ChaFlowApp extends Application {
     }
 
     private VBox createRegistrationForm() {
-        TextField displayName = field("Your name");
-        TextField username = field("username");
-        TextField phone = field("+212600000000");
-        PasswordField password = new PasswordField();
-        password.setPromptText("At least 8 characters");
-        PasswordField confirmation = new PasswordField();
-        confirmation.setPromptText("Repeat password");
-        Button submit = primaryButton("Create account");
-        submit.setOnAction(event -> {
-            if (!password.getText().equals(confirmation.getText())) {
-                showStatus("Passwords do not match.", false);
-                return;
-            }
-            authenticate(submit, () -> socketClient.register(phone.getText(), username.getText(), displayName.getText(), password.getText()));
-        });
-        VBox form = new VBox(9,
-                labelled("Display name", displayName), labelled("Username", username),
-                labelled("Phone number", phone), labelled("Password", password),
-                labelled("Confirm password", confirmation), submit);
-        form.setPadding(new Insets(18, 22, 18, 22));
-        return form;
+        return new RegistrationForm(
+                (button, phone, username, displayName, password) -> authenticate(button,
+                        () -> socketClient.register(phone, username, displayName, password)),
+                () -> tabs.getSelectionModel().select(0));
     }
 
     private void authenticate(Button button, AuthCall call) {

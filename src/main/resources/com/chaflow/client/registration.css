@@ -1,0 +1,32 @@
+#registration-form { -fx-font-family: "System"; -fx-font-size: 13px; }
+#registration-form .scroll-pane,
+#registration-form .scroll-pane > .viewport { -fx-background-color: white; }
+#registration-form .scroll-pane { -fx-padding: 0; -fx-background-insets: 0; }
+#registration-form .card { -fx-padding: 20 24; -fx-background-color: white; }
+#registration-form .eyebrow { -fx-font-size: 10px; -fx-font-weight: bold; -fx-text-fill: #0f766e; }
+#registration-form .title { -fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #0f172a; }
+#registration-form .muted { -fx-text-fill: #64748b; -fx-font-size: 11px; }
+#registration-form .caption { -fx-text-fill: #334155; -fx-font-weight: bold; }
+#registration-form .text-field {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 9 12;
+    -fx-prompt-text-fill: #64748b;
+    -fx-text-fill: #0f172a;
+}
+#registration-form .text-field:focused { -fx-border-color: #0f766e; -fx-border-width: 2; -fx-padding: 8 11; }
+#registration-form .text-field:invalid { -fx-border-color: #b42318; }
+#registration-form .error { -fx-text-fill: #b42318; -fx-font-size: 11px; }
+#registration-form .primary {
+    -fx-background-color: #0f766e;
+    -fx-background-radius: 8;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 12 18;
+    -fx-cursor: hand;
+}
+#registration-form .primary:hover { -fx-background-color: #115e59; }
+#registration-form .primary:focused { -fx-border-color: #134e4a; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 10 16; }
+#registration-form .hyperlink { -fx-text-fill: #0f766e; -fx-padding: 4 0; }
