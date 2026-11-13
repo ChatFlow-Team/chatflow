@@ -24,6 +24,38 @@ public class SocketClient {
         return send("REGISTER", phone, username, displayName, password);
     }
 
+    public OpenConversationResult openConversation(long requesterId, String targetIdOrPhone) {
+        if (targetIdOrPhone == null || targetIdOrPhone.isBlank()) {
+            return OpenConversationResult.failure("The other user's id or phone is required.");
+        }
+        StringBuilder request = new StringBuilder("OPEN_CONVERSATION");
+        request.append('\t').append(encode(Long.toString(requesterId)));
+        request.append('\t').append(encode(targetIdOrPhone));
+
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(SERVER_HOST, SERVER_PORT), 4000);
+            socket.setSoTimeout(8000);
+            try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8))) {
+                writer.write(request.toString());
+                writer.newLine();
+                writer.flush();
+                String response = reader.readLine();
+                if (response == null) return OpenConversationResult.failure("The server closed the connection.");
+                String[] fields = response.split("\\t", -1);
+                if ("OK".equals(fields[0]) && fields.length == 3) {
+                    return OpenConversationResult.success(Long.parseLong(fields[1]), "1".equals(fields[2]));
+                }
+                if ("ERROR".equals(fields[0]) && fields.length == 2) {
+                    return OpenConversationResult.failure(decode(fields[1]));
+                }
+                return OpenConversationResult.failure("Unexpected server response.");
+            }
+        } catch (IOException | NumberFormatException exception) {
+            return OpenConversationResult.failure("Cannot reach ChaFlow server: " + exception.getMessage());
+        }
+    }
+
     private AuthResult send(String command, String... values) {
         StringBuilder request = new StringBuilder(command);
         for (String value : values) {
@@ -55,12 +87,27 @@ public class SocketClient {
         return new String(DECODER.decode(value), StandardCharsets.UTF_8);
     }
 
+    private static String encode(String value) {
+        return ENCODER.encodeToString(value.getBytes(StandardCharsets.UTF_8));
+    }
+
     public record AuthResult(boolean successful, long userId, String username, String displayName, String message) {
         static AuthResult success(long id, String username, String name) {
             return new AuthResult(true, id, username, name, "Welcome, " + name + "!");
         }
         static AuthResult failure(String message) {
             return new AuthResult(false, -1, null, null, message);
+        }
+    }
+
+    public record OpenConversationResult(boolean successful, long conversationId, boolean created, String message) {
+        static OpenConversationResult success(long conversationId, boolean created) {
+            return new OpenConversationResult(true, conversationId, created,
+                    created ? "New conversation started." : "Existing conversation reused.");
+        }
+
+        static OpenConversationResult failure(String message) {
+            return new OpenConversationResult(false, -1, false, message);
         }
     }
 }
