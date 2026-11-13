@@ -83,13 +83,6 @@ public final class ConversationService {
     }
  
     private Optional<Long> resolveTargetId(Connection connection, String idOrPhone) throws SQLException {
-        // A plain run of digits with no '+' is treated as a numeric id_utilisateur;
-        // anything else is treated as a phone number.
-        // TODO FOR YOU: confirm this matches your real phone-number format. Today
-        // demo phone numbers all start with '+' (see V2__insert_demo_users.sql), so
-        // this rule works for them, but if you ever allow phone numbers stored/entered
-        // without a leading '+', a value like "212600000001" would be misread as a
-        // user id instead of a phone number. Adjust the condition below if so.
         if (idOrPhone.matches("\\d+")) {
             String sql = "SELECT id_utilisateur FROM chatflow.utilisateur WHERE id_utilisateur = ?";
             try (PreparedStatement ps = connection.prepareStatement(sql)) {
