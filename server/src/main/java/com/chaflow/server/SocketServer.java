@@ -14,11 +14,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.chaflow.server.dao.MessageDAO;
+import com.chaflow.server.dao.ParticipantDAO;
+import com.chaflow.server.db.DatabaseDataSource;
+import com.chaflow.server.service.SendMessageService;
 
 public final class SocketServer {
     private static final int PORT = Integer.parseInt(System.getenv().getOrDefault("CHAFLOW_PORT", "5050"));
     private static final AuthService AUTH = new AuthService();
     private static final ConversationService CONVERSATIONS = new ConversationService();
+
+    private static final SendMessageService MESSAGES;
+
+    static {
+        var dataSource = new DatabaseDataSource();
+
+        MESSAGES = new SendMessageService(
+                new MessageDAO(dataSource),
+                new ParticipantDAO(dataSource)
+        );
+    }
+
     private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DECODER = Base64.getUrlDecoder();
 
@@ -91,6 +107,38 @@ public final class SocketServer {
                             CONVERSATIONS.openPrivateConversation(requesterId, targetIdOrPhone);
                     yield "OK\t" + result.conversationId() + "\t" + (result.created() ? "1" : "0");
                 }
+
+                case "SEND_MESSAGE" -> {
+                    if (fields.length != 4) {
+                        throw new IllegalArgumentException("Invalid message request.");
+                    }
+
+                    long senderId;
+                    long conversationId;
+
+                    try {
+                        senderId = Long.parseLong(decode(fields[1]));
+                        conversationId = Long.parseLong(decode(fields[2]));
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Invalid identifiers.", e);
+                    }
+
+                    String content = decode(fields[3]);
+
+                    try {
+                        var savedMessage = MESSAGES.sendText(
+                                senderId,
+                                conversationId,
+                                content
+                        );
+
+                        yield "OK\t" + savedMessage.idMessage();
+                    } catch (SecurityException e) {
+                        throw new IllegalArgumentException("Not allowed to send message.");
+                    }
+                }
+
+
                 default -> throw new IllegalArgumentException("Unknown request.");
             };
         } catch (IllegalArgumentException exception) {
