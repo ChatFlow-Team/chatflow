@@ -1,0 +1,41 @@
+#login-form {
+    -fx-padding: 26;
+    -fx-background-color: white;
+    -fx-font-family: "System";
+    -fx-font-size: 13px;
+}
+#login-form .eyebrow {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f766e;
+}
+#login-form .title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #0f172a;
+}
+#login-form .muted { -fx-text-fill: #64748b; -fx-font-size: 12px; }
+#login-form .caption { -fx-text-fill: #334155; -fx-font-weight: bold; }
+#login-form .text-field {
+    -fx-background-color: #f8fafc;
+    -fx-border-color: #cbd5e1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 11 12;
+    -fx-prompt-text-fill: #64748b;
+    -fx-text-fill: #0f172a;
+}
+#login-form .text-field:focused { -fx-border-color: #0f766e; -fx-border-width: 2; -fx-padding: 10 11; }
+#login-form .text-field:invalid { -fx-border-color: #b42318; }
+#login-form .error { -fx-text-fill: #b42318; -fx-font-size: 12px; }
+#login-form .primary {
+    -fx-background-color: #0f766e;
+    -fx-background-radius: 8;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 12 18;
+    -fx-cursor: hand;
+}
+#login-form .primary:hover { -fx-background-color: #115e59; }
+#login-form .primary:focused { -fx-border-color: #134e4a; -fx-border-width: 2; -fx-border-radius: 8; -fx-padding: 10 16; }
+#login-form .hyperlink { -fx-text-fill: #0f766e; -fx-padding: 4 0; }
