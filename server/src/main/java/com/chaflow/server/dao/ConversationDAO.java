@@ -71,4 +71,31 @@ public class ConversationDAO {
                 null // derniereActivite: absente du schema SQL fourni
         );
     }
+
+    public Optional<Conversation> findPrivateBetween(long userA, long userB) throws SQLException {
+        String sql = """
+                SELECT c.id_conversation, c.nature, c.cree_le
+                FROM chatflow.conversation c
+                JOIN chatflow.participant cu1 ON c.id_conversation = cu1.id_conversation
+                JOIN chatflow.participant cu2 ON c.id_conversation = cu2.id_conversation
+                WHERE c.nature = 'PRIVEE'
+                  AND cu1.id_utilisateur = ?
+                  AND cu2.id_utilisateur = ?
+                  AND cu1.date_sortie IS NULL
+                  AND cu2.date_sortie IS NULL
+                  AND (SELECT COUNT(*) FROM chatflow.participant p
+                       WHERE p.id_conversation = c.id_conversation
+                         AND p.date_sortie IS NULL) = 2
+                """;
+
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, userA);
+            statement.setLong(2, userB);
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? Optional.of(mapConversation(rs)) : Optional.empty();
+            }
+        }
+    }
 }
