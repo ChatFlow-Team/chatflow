@@ -8,13 +8,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chatflow_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-chatflow_db}
     ports:
-      # Host port 5433 avoids colliding with an existing local/Docker PostgreSQL on 5432.
       - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - chaflow-postgres-data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}" ]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -24,20 +22,18 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: chaflow-socket-server
-    ports:
-      - "5050:5050"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       CHAFLOW_PORT: "5050"
-      CHAFLOW_DATA_DIR: /app/data
-    volumes:
-      - chaflow-data:/app/data
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chatflow_db}
+      DB_USER: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-chatflow_dev_password}
+    ports:
+      - "5050:5050"
     restart: unless-stopped
-
-
-
 
 volumes:
   chaflow-postgres-data:
-  chaflow-server-data:
-  chaflow-data:
-    name: chaflow-data
+    name: chaflow-postgres-data
