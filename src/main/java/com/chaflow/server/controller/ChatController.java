@@ -20,4 +20,5 @@ public final class ChatController {
     public List<Map<String,Object>> conversations(long me)throws SQLException{return service.conversations(me);}
     public List<Map<String,Object>> messages(long me,long conversation,int limit)throws SQLException{return service.messages(me,conversation,limit);}
     public Map<String,Object> sendMessage(long me,long conversation,String content)throws SQLException{return service.sendMessage(me,conversation,content);}
+    public List<Long> activeParticipantIds(long me,long conversation)throws SQLException{return service.activeParticipantIds(me,conversation);}
 }

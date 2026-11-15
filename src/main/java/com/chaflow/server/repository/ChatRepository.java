@@ -16,4 +16,5 @@ public interface ChatRepository {
     List<Map<String,Object>> conversations(long me) throws SQLException;
     List<Map<String,Object>> messages(long me, long conversation, int limit) throws SQLException;
     Map<String,Object> sendMessage(long me, long conversation, String content) throws SQLException;
+    List<Long> activeParticipantIds(long me, long conversation) throws SQLException;
 }
