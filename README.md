@@ -13,7 +13,7 @@ ChaFlow is a Java 21 desktop messaging application. The JavaFX client communicat
 - A unique canonical user pair prevents duplicate private conversations, including concurrent creation attempts.
 - Conversation creation and participant insertion run in one database transaction.
 - Send and retrieve text messages; server verifies conversation membership before reading or sending.
-- Message history is presented oldest-to-newest; the JavaFX client refreshes message history and sidebars every three seconds.
+- Message history is presented oldest-to-newest. The TCP event stream refreshes the selected history and conversation previews as messages arrive.
 - Docker Compose starts PostgreSQL and the socket server; Flyway runs automatically at server startup.
 
 ## Requirements
@@ -87,6 +87,11 @@ DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build -d
 Successful registration signs the new account in and opens the messenger directly.
 Signing in afterwards opens the welcome screen, where the messenger can be opened.
 
+The messenger opens with a 1216 × 680 content area. Resize it to 880 × 600
+to review the compact layout. Docker Compose runs PostgreSQL and the TCP server.
+Start the JavaFX client on the host with the Maven JavaFX goal above. The
+shaded `target/chaflow-server.jar` is the TCP server entry point.
+
 ## 4. Demo accounts
 
 All demo accounts use the password `ChatFlow123!`.
@@ -141,8 +146,7 @@ database schema are retained.
 
 ### JavaFX client (`src/main/java/com/chaflow/client`)
 
-- `view`: JavaFX screens and reusable UI components (`AuthView`, `LoginView`,
-  `RegisterView`, `MessengerView`, `ChatView`).
+- `view`: the local WebView host and messenger actions. The connection, registration and messenger pages live in `src/main/resources/web`.
 - `controller`: UI action coordinators (`AuthController`, `MessengerController`,
   `ChatController`).
 - `service`: client use cases and the socket transport adapter (`AuthService`,
@@ -152,7 +156,7 @@ database schema are retained.
 - `SocketClient`: low-level implementation of the existing TCP protocol.
 - `ChaFlowApp`: JavaFX application entry point and screen lifecycle.
 
-### Socket server (`server/src/main/java/com/chaflow/server`)
+### Socket server (`src/main/java/com/chaflow/server`)
 
 - `SocketServer`: TCP lifecycle, request framing, session lookup and response
   serialization only.

@@ -60,3 +60,39 @@
   .auth-brand { width: 100%; flex-direction: row; padding: 12px; }
   .auth-brand img { width: 40px; height: auto; }
 }
+
+@layer components {
+  .messenger-window {
+    @apply flex h-screen flex-col overflow-hidden rounded-[16px] border border-line bg-white;
+  }
+  .messenger-sidebar {
+    @apply flex w-[332px] shrink-0 flex-col gap-3 border-r border-line bg-white p-[18px];
+  }
+  .avatar {
+    @apply inline-flex shrink-0 items-center justify-center rounded-full bg-lavender text-[15px] font-semibold text-action;
+  }
+  .avatar[hidden] { display: none; }
+  .conversation-row {
+    @apply flex min-h-[62px] w-full items-center gap-2.5 rounded-lg border border-transparent p-2.5 text-left hover:bg-canvas;
+  }
+  .conversation-avatar { @apply bg-canvas text-ink; }
+  .conversation-row[aria-current="true"] { @apply border-action bg-lavender text-action; }
+  .conversation-row[aria-current="true"] .avatar { @apply bg-action text-white; }
+  .message-line { @apply flex min-w-0 items-end gap-[7px]; }
+  .message-bubble {
+    @apply flex w-[309px] max-w-[85%] flex-col gap-1 break-words rounded-xl border border-line bg-white p-[11px] text-[13px];
+  }
+  .message-sent { @apply border-action bg-action text-white; }
+  .contact-action {
+    @apply rounded border border-line px-2 py-1 text-xs font-semibold text-action hover:bg-lavender disabled:opacity-60;
+  }
+}
+
+@media (max-width: 1023px) {
+  .messenger-sidebar { width: 278px; }
+}
+
+@media (max-width: 650px) {
+  .messenger-sidebar { width: 40%; padding: 10px; }
+  .conversation-avatar { display: none; }
+}

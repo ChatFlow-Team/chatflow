@@ -110,7 +110,7 @@ public final class ChatDAO {
     }
     public List<Map<String,Object>> conversations(long me)throws SQLException{
         String sql="""
-          SELECT c.id_conversation,c.nature,c.derniere_activite,u.id_utilisateur AS other_id,u.pseudo,u.nom_affiche,u.numero_telephone,
+          SELECT c.id_conversation,c.nature,c.derniere_activite,u.id_utilisateur AS other_id,u.pseudo,u.nom_affiche,u.numero_telephone,u.statut,
                  (SELECT m.contenu FROM chatflow.message m WHERE m.id_conversation=c.id_conversation AND m.supprime_le IS NULL ORDER BY m.envoye_le DESC,m.id_message DESC LIMIT 1) AS last_message,
                  (SELECT COUNT(*) FROM chatflow.message_destinataire md JOIN chatflow.message um ON um.id_message=md.id_message
                   WHERE md.id_destinataire=? AND um.id_conversation=c.id_conversation AND md.statut <> 'LU') AS unread_count
@@ -120,7 +120,7 @@ public final class ChatDAO {
           WHERE mine.id_utilisateur=? AND mine.date_sortie IS NULL AND c.nature='PRIVEE'
           ORDER BY c.derniere_activite DESC,c.id_conversation DESC
           """;
-        List<Map<String,Object>> out=new ArrayList<>();try(Connection c=dataSource.getConnection();PreparedStatement p=c.prepareStatement(sql)){p.setLong(1,me);p.setLong(2,me);p.setLong(3,me);try(ResultSet r=p.executeQuery()){while(r.next()){Map<String,Object> m=new LinkedHashMap<>();m.put("id",r.getLong("id_conversation"));m.put("nature",r.getString("nature"));m.put("lastActivity",r.getTimestamp("derniere_activite").toInstant().toString());m.put("otherId",r.getObject("other_id")==null?null:r.getLong("other_id"));m.put("username",r.getString("pseudo"));m.put("displayName",r.getString("nom_affiche"));m.put("phone",r.getString("numero_telephone"));m.put("lastMessage",r.getString("last_message"));m.put("unreadCount",r.getLong("unread_count"));out.add(m);}}}return out;
+        List<Map<String,Object>> out=new ArrayList<>();try(Connection c=dataSource.getConnection();PreparedStatement p=c.prepareStatement(sql)){p.setLong(1,me);p.setLong(2,me);p.setLong(3,me);try(ResultSet r=p.executeQuery()){while(r.next()){Map<String,Object> m=new LinkedHashMap<>();m.put("id",r.getLong("id_conversation"));m.put("nature",r.getString("nature"));m.put("lastActivity",r.getTimestamp("derniere_activite").toInstant().toString());m.put("otherId",r.getObject("other_id")==null?null:r.getLong("other_id"));m.put("username",r.getString("pseudo"));m.put("displayName",r.getString("nom_affiche"));m.put("phone",r.getString("numero_telephone"));m.put("status",r.getString("statut"));m.put("lastMessage",r.getString("last_message"));m.put("unreadCount",r.getLong("unread_count"));out.add(m);}}}return out;
     }
     public List<Map<String,Object>> messages(long me,long conversation,int limit)throws SQLException{
         requireMember(me,conversation);

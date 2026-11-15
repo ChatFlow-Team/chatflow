@@ -1,0 +1,11 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="33.28" height="27.04" viewBox="0 0 33.28 27.04" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Symbole ChatFlow">
+<rect id="Bulle claire" y="0.52" width="21.32" height="15.6" rx="6.24" fill="white"/>
+<rect id="Pointe claire" x="2.6" y="10.4" width="5.2" height="5.2" rx="1.04" transform="rotate(-18 2.6 10.4)" fill="white"/>
+<rect id="Bulle violette" x="10.4" y="6.24" width="21.84" height="16.64" rx="6.76" fill="#6042CE"/>
+<rect id="Pointe violette" x="24.96" y="17.68" width="5.2" height="5.2" rx="1.04" transform="rotate(17 24.96 17.68)" fill="#6042CE"/>
+<circle id="Point 1" cx="16.64" cy="14.56" r="1.04" fill="white"/>
+<circle id="Point 2" cx="21.84" cy="14.56" r="1.04" fill="white"/>
+<circle id="Point 3" cx="27.04" cy="14.56" r="1.04" fill="white"/>
+</g>
+</svg>
