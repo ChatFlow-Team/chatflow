@@ -1,7 +1,7 @@
 package com.chaflow.server.dao;
 
 import com.chaflow.server.model.Message;
-import com.chaflow.server.model.TypeMessage;
+import com.chaflow.server.enums.TypeMessage;
 
 import javax.sql.DataSource;
 import java.sql.*;

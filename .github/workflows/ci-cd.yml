@@ -23,15 +23,9 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # Build JavaFX client (root)
-      - name: Build JavaFX Client
+      - name: Build and verify ChatFlow
         run: mvn -B clean verify
 
-      # Build Java Socket server
-      - name: Build Socket Server
-        run: mvn -B -f server/pom.xml clean verify
-
-      # Save generated JAR files
       - name: Upload ChatFlow artifacts
         if: success()
         uses: actions/upload-artifact@v4
@@ -39,5 +33,4 @@ jobs:
           name: ChatFlow-build
           path: |
             target/*.jar
-            server/target/*.jar
           if-no-files-found: warn
