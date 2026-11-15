@@ -111,8 +111,8 @@ This is a coursework/development implementation. The session token is held in se
 
 ## Application architecture
 
-The code is organized into explicit layers. The existing socket wire format and
-database schema are retained.
+The client and server share one Maven project and one source root (`src/main/java`).
+Their packages remain separated under `com.chaflow.client` and `com.chaflow.server`.
 
 ### JavaFX client (`src/main/java/com/chaflow/client`)
 
@@ -127,7 +127,7 @@ database schema are retained.
 - `SocketClient`: low-level implementation of the existing TCP protocol.
 - `ChaFlowApp`: JavaFX application entry point and screen lifecycle.
 
-### Socket server (`server/src/main/java/com/chaflow/server`)
+### Socket server (`src/main/java/com/chaflow/server`)
 
 - `SocketServer`: TCP lifecycle, request framing, session lookup and response
   serialization only.
@@ -136,7 +136,8 @@ database schema are retained.
 - `auth`: password hashing utilities.
 - `repository`: persistence contracts and JDBC repository adapters.
 - `dao`: SQL and JDBC mapping, including `ChatDAO` and the existing entity DAOs.
-- `model`: persistence/domain records and enums.
+- `model`: persistence/domain records.
+- `enums`: server enum types, kept separate from models.
 - `db` and `config`: shared PostgreSQL DataSource, Flyway and runtime settings.
 
 The server dependency direction is:
@@ -149,9 +150,7 @@ with the server over the existing socket protocol.
 After extracting the project, use Java 21 and run:
 
 ```bash
-cd chatflow/server
 mvn clean package
-cd ..
 mvn clean javafx:run
 ```
 
@@ -167,3 +166,32 @@ sign in, search another account by username and phone, send/accept a friend
 request, start a direct conversation, send a message, restart the client, and
 confirm message history is still present. The ZIP integrity check is not a
 substitute for these runtime integration tests.
+
+
+## Consolidated source layout
+
+Both applications are compiled by the single root `pom.xml` from one source tree:
+
+```text
+src/main/java/com/chaflow/
+├── client/
+│   ├── controller/
+│   ├── model/
+│   ├── service/
+│   ├── enums/
+│   └── view/
+└── server/
+    ├── controller/
+    ├── model/
+    ├── service/
+    ├── enums/
+    ├── repository/
+    ├── dao/
+    ├── db/
+    ├── auth/
+    └── config/
+```
+
+Flyway migrations are in `src/main/resources/db/migration`. Docker builds the
+server from the same root Maven project; there is no separate `server/` source
+directory or server Maven module.
