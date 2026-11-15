@@ -1,7 +1,7 @@
 package com.chaflow.server.dao;
 
 import com.chaflow.server.model.Conversation;
-import com.chaflow.server.model.NatureConversation;
+import com.chaflow.server.enums.NatureConversation;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
