@@ -15,7 +15,7 @@ import java.util.Optional;
 public class ConversationDAO {
 
     private static final String FIND_BY_ID_SQL = """
-            SELECT id_conversation, nature, cree_le
+            SELECT id_conversation, nature, cree_le, derniere_activite
             FROM chatflow.conversation
             WHERE id_conversation = ?
             """;
@@ -23,7 +23,7 @@ public class ConversationDAO {
     private static final String INSERT_SQL = """
             INSERT INTO chatflow.conversation (nature)
             VALUES (?)
-            RETURNING id_conversation, nature, cree_le
+            RETURNING id_conversation, nature, cree_le, derniere_activite
             """;
 
     private final DataSource dataSource;
@@ -68,7 +68,7 @@ public class ConversationDAO {
                 rs.getLong("id_conversation"),
                 NatureConversation.valueOf(rs.getString("nature")),
                 rs.getObject("cree_le", OffsetDateTime.class),
-                null // derniereActivite: absente du schema SQL fourni
+                rs.getObject("derniere_activite", OffsetDateTime.class)
         );
     }
 }
