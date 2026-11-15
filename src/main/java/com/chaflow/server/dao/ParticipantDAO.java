@@ -1,7 +1,7 @@
 package com.chaflow.server.dao;
 
 import com.chaflow.server.model.Participant;
-import com.chaflow.server.model.RoleParticipant;
+import com.chaflow.server.enums.RoleParticipant;
 
 import javax.sql.DataSource;
 import java.sql.Connection;

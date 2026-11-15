@@ -1,5 +1,7 @@
 package com.chaflow.server.model;
 
+import com.chaflow.server.enums.TypeMessage;
+
 import java.time.OffsetDateTime;
 
 /**

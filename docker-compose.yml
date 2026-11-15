@@ -19,7 +19,7 @@ services:
 
   chaflow-server:
     build:
-      context: ./server
+      context: .
       dockerfile: Dockerfile
     container_name: chaflow-socket-server
     depends_on:
