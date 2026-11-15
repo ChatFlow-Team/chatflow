@@ -84,6 +84,9 @@ On an ARM64 Docker host, build and run the TCP server in AMD64 mode because Java
 DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build -d
 ```
 
+Successful registration signs the new account in and opens the messenger directly.
+Signing in afterwards opens the welcome screen, where the messenger can be opened.
+
 ## 4. Demo accounts
 
 All demo accounts use the password `ChatFlow123!`.

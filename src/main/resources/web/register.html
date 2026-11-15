@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Inscription · ChatFlow</title>
+  <link rel="stylesheet" href="chatflow.css">
+  <script src="auth.js" defer></script>
+  <script src="register.js" defer></script>
+</head>
+<body>
+  <div class="auth-window">
+    <aside class="auth-brand">
+      <img src="chatflow.svg" alt="" width="64" height="52">
+      <span>ChatFlow</span>
+    </aside>
+    <main class="auth-content">
+      <form id="auth-form" class="auth-panel flex flex-col gap-[9px]" novalidate>
+        <h1 class="auth-title">Inscription</h1>
+        <div class="auth-field">
+          <label for="phone">Numéro de téléphone</label>
+          <input class="auth-input" id="phone" type="tel" autocomplete="tel" placeholder="+212 600 000 000" aria-describedby="phone-error" required>
+          <p class="text-xs text-danger" id="phone-error" hidden></p>
+        </div>
+        <div class="auth-field">
+          <label for="username">Pseudo</label>
+          <input class="auth-input" id="username" type="text" autocomplete="username" placeholder="votre_pseudo" aria-describedby="username-error" required>
+          <p class="text-xs text-danger" id="username-error" hidden></p>
+        </div>
+        <div class="auth-field">
+          <label for="display-name">Nom affiché</label>
+          <input class="auth-input" id="display-name" type="text" autocomplete="name" placeholder="Votre nom" aria-describedby="display-name-error" required>
+          <p class="text-xs text-danger" id="display-name-error" hidden></p>
+        </div>
+        <div class="auth-field">
+          <label for="password">Mot de passe</label>
+          <input class="auth-input" id="password" type="password" autocomplete="new-password" placeholder="Au moins 8 caractères" aria-describedby="password-error" required>
+          <p class="text-xs text-danger" id="password-error" hidden></p>
+        </div>
+        <div class="auth-field">
+          <label for="confirmation">Confirmer le mot de passe</label>
+          <input class="auth-input" id="confirmation" type="password" autocomplete="new-password" placeholder="Retapez le mot de passe" aria-describedby="confirmation-error" required>
+          <p class="text-xs text-danger" id="confirmation-error" hidden></p>
+        </div>
+        <p class="auth-alert" id="error" role="alert" hidden></p>
+        <button class="primary" id="submit" type="submit">Créer un compte</button>
+        <button class="secondary" id="alternate" type="button">Déjà un compte ? Se connecter</button>
+      </form>
+    </main>
+  </div>
+</body>
+</html>

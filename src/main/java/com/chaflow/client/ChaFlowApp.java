@@ -7,7 +7,6 @@ import com.chaflow.client.service.SocketService;
 import com.chaflow.client.service.AuthService;
 import com.chaflow.client.service.ChatService;
 import com.chaflow.client.view.LocalWebView;
-import com.chaflow.client.view.RegisterView;
 import com.chaflow.client.view.ChatView;
 import com.chaflow.client.view.MessengerView;
 
@@ -96,38 +95,37 @@ public class ChaFlowApp extends Application {
     }
 
     private void showRegistration() {
-        authPage.detach();
-        authPage = null;
-        Label feedback = new Label();
-        feedback.setWrapText(true);
-        Button back = new Button("Déjà un compte ? Se connecter");
-        RegisterView register = new RegisterView((button, data) -> {
-            button.setDisable(true);
-            back.setDisable(true);
-            feedback.setText("Inscription en cours…");
-            Scene page = stage.getScene();
+        showAuthPage("Inscription", new LocalWebView("register.html", new RegistrationActions()));
+    }
+
+    public final class RegistrationActions {
+        public void register(String phone, String username, String displayName, String password) {
+            LocalWebView page = authPage;
             io.submit(() -> {
-                SocketClient.AuthResult result = authController.register(
-                        data.phone(), data.username(), data.displayName(), data.password());
+                SocketClient.AuthResult result = authController.register(phone, username, displayName, password);
                 Platform.runLater(() -> {
-                    if (stage.getScene() != page) return;
-                    button.setDisable(false);
-                    back.setDisable(false);
+                    if (authPage != page) return;
                     if (result.successful()) {
                         account = result;
                         showMessenger();
                     } else {
-                        feedback.setText(result.message());
+                        page.call("registrationFailed", registrationError(result.message()));
                     }
                 });
             });
-        }, feedback::setText);
-        back.setOnAction(event -> showAuth());
-        VBox page = new VBox(12, register.root(), feedback, back);
-        page.setPadding(new Insets(20));
-        stage.setTitle("ChatFlow — Inscription");
-        stage.setScene(new Scene(page, 520, 570));
-        stage.sizeToScene();
+        }
+
+        public void openLogin() {
+            showAuth();
+        }
+    }
+
+    private static String registrationError(String message) {
+        return switch (message) {
+            case "Phone number or username is already registered." ->
+                    "Ce numéro de téléphone ou ce pseudo est déjà utilisé.";
+            default -> message;
+        };
     }
 
     private void showMessenger(){
