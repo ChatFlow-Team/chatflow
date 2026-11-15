@@ -62,6 +62,28 @@ The client defaults to `127.0.0.1:5050`. To use another server host/port:
 mvn javafx:run -Djavafx.args="-Dchaflow.host=192.168.1.10 -Dchaflow.port=5050"
 ```
 
+### Regenerate the WebView stylesheet
+
+After editing the HTML, JavaScript or Tailwind source, run these commands from the project root:
+
+```bash
+npm ci
+npm run build:css
+```
+
+Tailwind CSS 3.4.19 scans the HTML and JavaScript under `src/main/resources/web`.
+Commit the generated `chatflow.css` along with its source changes. Maven copies the
+HTML, JavaScript, CSS, font and logo from this directory into the client resources.
+JavaFX 21.0.6 reads these local resources at launch. Node.js is only used to regenerate
+the stylesheet. [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1) is bundled as static TrueType fonts with the OFL license.
+
+On an ARM64 Docker host, build and run the TCP server in AMD64 mode because JavaFX
+21.0.6's Linux ARM64 artifacts are unavailable in Maven Central:
+
+```bash
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build -d
+```
+
 ## 4. Demo accounts
 
 All demo accounts use the password `ChatFlow123!`.

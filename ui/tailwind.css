@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: Inter;
+  src: url("Inter-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Inter;
+  src: url("Inter-SemiBold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Inter;
+  src: url("Inter-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@layer base {
+  body { @apply bg-canvas font-sans text-ink; }
+  :focus-visible { @apply outline outline-2 outline-offset-2 outline-action; }
+}
+
+@layer components {
+  .auth-window {
+    @apply flex min-h-screen overflow-hidden rounded-[14px] border border-line bg-white;
+  }
+  .auth-brand {
+    @apply flex w-[202px] shrink-0 flex-col items-center justify-center gap-3 bg-ink text-[28px] font-bold text-white;
+  }
+  .auth-content { @apply flex min-w-0 flex-1 items-center justify-center px-6 py-4; }
+  .auth-panel { @apply w-full max-w-[430px]; }
+  .auth-title { @apply text-[30px] font-bold leading-tight; }
+  .auth-title[tabindex="-1"]:focus { outline: none; }
+  .auth-field { @apply flex flex-col gap-[5px] text-[13px] font-semibold leading-tight; }
+  .auth-input {
+    @apply h-11 w-full rounded-lg border border-line bg-white px-3 text-[15px] font-normal placeholder:text-muted focus:border-action focus:outline-none focus:ring-1 focus:ring-action;
+  }
+  .auth-input[aria-invalid="true"] { @apply border-danger focus:ring-danger; }
+  .primary, .secondary {
+    @apply flex h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold;
+  }
+  .primary { @apply bg-action text-white hover:bg-[#5235b9] disabled:bg-waiting disabled:text-ink; }
+  .secondary { @apply border border-action bg-white text-action hover:bg-lavender disabled:opacity-60; }
+  .auth-alert { @apply rounded-lg bg-[#fcf0ee] px-3 py-2 text-[13px] font-semibold text-danger; }
+}
+
+@media (max-width: 580px) {
+  .auth-window { flex-direction: column; }
+  .auth-brand { width: 100%; flex-direction: row; padding: 12px; }
+  .auth-brand img { width: 40px; height: auto; }
+}
