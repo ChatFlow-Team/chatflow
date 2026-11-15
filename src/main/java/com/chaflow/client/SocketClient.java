@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Consumer;
 
 public final class SocketClient {
     private static final String HOST=System.getProperty("chaflow.host","127.0.0.1");
@@ -28,6 +29,82 @@ public final class SocketClient {
     public List<Map<String,Object>> messages(String token,long conversation)throws IOException{return list("MESSAGES",token,Long.toString(conversation));}
     public Map<String,Object> sendMessage(String token,long conversation,String content)throws IOException{return object("SEND_MESSAGE",token,Long.toString(conversation),content);}
     public void logout(String token){try{raw("LOGOUT",token);}catch(Exception ignored){}}
+
+    /** Opens a dedicated server-push connection without blocking the caller. */
+    public EventConnection listenEvents(String token, Consumer<Map<String,Object>> onEvent,
+                                        Consumer<Exception> onError) {
+        EventConnection connection = new EventConnection(token, onEvent, onError);
+        connection.start();
+        return connection;
+    }
+
+    public static final class EventConnection implements AutoCloseable {
+        private final String token;
+        private final Consumer<Map<String,Object>> onEvent;
+        private final Consumer<Exception> onError;
+        private volatile Socket socket;
+        private volatile boolean closed;
+        private Thread thread;
+
+        private EventConnection(String token, Consumer<Map<String,Object>> onEvent,
+                                Consumer<Exception> onError) {
+            this.token = Objects.requireNonNull(token);
+            this.onEvent = Objects.requireNonNull(onEvent);
+            this.onError = Objects.requireNonNull(onError);
+        }
+
+        private void start() {
+            thread = new Thread(this::listen, "chaflow-realtime-events");
+            thread.setDaemon(true);
+            thread.start();
+        }
+
+        private void listen() {
+            if (closed) return;
+            try (Socket connection = new Socket()) {
+                socket = connection;
+                if (closed) return;
+                connection.connect(new InetSocketAddress(HOST, PORT), 4000);
+                connection.setSoTimeout(0);
+                try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), StandardCharsets.UTF_8));
+                     BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
+                    writer.write("EVENTS\t" + ENC.encodeToString(token.getBytes(StandardCharsets.UTF_8)));
+                    writer.newLine();
+                    writer.flush();
+
+                    String handshake = reader.readLine();
+                    if (handshake == null) throw new IOException("Server closed the realtime connection.");
+                    String[] hello = handshake.split("\\t", -1);
+                    if (hello.length != 2) throw new IOException("Invalid realtime handshake.");
+                    String helloPayload = new String(DEC.decode(hello[1]), StandardCharsets.UTF_8);
+                    if ("ERROR".equals(hello[0])) throw new IOException(helloPayload);
+                    if (!"OK".equals(hello[0])) throw new IOException("Unexpected realtime handshake.");
+
+                    String line;
+                    while (!closed && (line = reader.readLine()) != null) {
+                        String[] parts = line.split("\\t", -1);
+                        if (parts.length != 2 || !"EVENT".equals(parts[0]))
+                            throw new IOException("Invalid realtime event frame.");
+                        String json = new String(DEC.decode(parts[1]), StandardCharsets.UTF_8);
+                        Map<String,Object> event = JSON.readValue(json, new TypeReference<>() {});
+                        onEvent.accept(event);
+                    }
+                    if (!closed) throw new IOException("Realtime connection was closed by the server.");
+                }
+            } catch (Exception e) {
+                if (!closed) onError.accept(e);
+            } finally {
+                socket = null;
+            }
+        }
+
+        @Override public void close() {
+            closed = true;
+            Socket current = socket;
+            if (current != null) try { current.close(); } catch (IOException ignored) { }
+            if (thread != null) thread.interrupt();
+        }
+    }
 
     private List<Map<String,Object>> list(String command,String token,String... values)throws IOException{return JSON.convertValue(JSON.readTree(raw(command,prepend(token,values))),new TypeReference<>(){});}
     private Map<String,Object> object(String command,String token,String... values)throws IOException{return JSON.readValue(raw(command,prepend(token,values)),new TypeReference<>(){});}

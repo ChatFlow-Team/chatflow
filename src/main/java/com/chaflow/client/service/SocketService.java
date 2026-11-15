@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** Sole client-side transport adapter. It speaks the existing socket protocol. */
 public final class SocketService {
@@ -24,4 +25,5 @@ public final class SocketService {
     public List<Map<String,Object>> conversations(String token)throws IOException{return transport.conversations(token);}
     public List<Map<String,Object>> messages(String token,long id)throws IOException{return transport.messages(token,id);}
     public Map<String,Object> sendMessage(String token,long id,String body)throws IOException{return transport.sendMessage(token,id,body);}
+    public SocketClient.EventConnection listenEvents(String token, Consumer<Map<String,Object>> onEvent, Consumer<Exception> onError){return transport.listenEvents(token,onEvent,onError);}
 }

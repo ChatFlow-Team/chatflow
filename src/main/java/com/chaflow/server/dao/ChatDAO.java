@@ -136,6 +136,21 @@ public final class ChatDAO {
             try(PreparedStatement p=c.prepareStatement("UPDATE chatflow.conversation SET derniere_activite=CURRENT_TIMESTAMP WHERE id_conversation=?")){p.setLong(1,conversation);p.executeUpdate();}
             c.commit();return Map.of("id",id,"senderId",me,"content",body,"sentAt",sent);
         }catch(Exception e){c.rollback();if(e instanceof SQLException s)throw s;if(e instanceof RuntimeException re)throw re;throw new SQLException(e);}}}
+    /** Returns only active conversation members, excluding the authenticated sender. */
+    public List<Long> activeParticipantIds(long me, long conversation) throws SQLException {
+        requireMember(me, conversation);
+        String sql = "SELECT id_utilisateur FROM chatflow.participant WHERE id_conversation=? AND date_sortie IS NULL AND id_utilisateur<>? ORDER BY id_utilisateur";
+        List<Long> ids = new ArrayList<>();
+        try (Connection c = dataSource.getConnection(); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setLong(1, conversation);
+            p.setLong(2, me);
+            try (ResultSet r = p.executeQuery()) {
+                while (r.next()) ids.add(r.getLong(1));
+            }
+        }
+        return ids;
+    }
+
     private void requireMember(long me,long conv)throws SQLException{try(Connection c=dataSource.getConnection()){requireMember(c,me,conv);}}
     private void requireMember(Connection c,long me,long conv)throws SQLException{try(PreparedStatement p=c.prepareStatement("SELECT 1 FROM chatflow.participant WHERE id_utilisateur=? AND id_conversation=? AND date_sortie IS NULL")){p.setLong(1,me);p.setLong(2,conv);try(ResultSet r=p.executeQuery()){if(!r.next())throw new IllegalArgumentException("You are not a member of this conversation.");}}}
     private boolean friendshipExists(Connection c,long a,long b)throws SQLException{try(PreparedStatement p=c.prepareStatement("SELECT 1 FROM chatflow.friendship WHERE user_low=LEAST(?,?) AND user_high=GREATEST(?,?)")){p.setLong(1,a);p.setLong(2,b);p.setLong(3,a);p.setLong(4,b);try(ResultSet r=p.executeQuery()){return r.next();}}}

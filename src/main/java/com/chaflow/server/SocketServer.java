@@ -10,6 +10,7 @@ import com.chaflow.server.db.Database;
 import com.chaflow.server.repository.JdbcChatRepository;
 import com.chaflow.server.repository.JdbcUserRepository;
 import com.chaflow.server.config.ServerConfig;
+import com.chaflow.server.socket.ClientConnectionRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
@@ -29,6 +30,7 @@ public final class SocketServer {
     private static final Base64.Encoder ENC = Base64.getUrlEncoder().withoutPadding();
     private static final Base64.Decoder DEC = Base64.getUrlDecoder();
     private static final ConcurrentMap<String, Long> SESSIONS = new ConcurrentHashMap<>();
+    private static final ClientConnectionRegistry CONNECTIONS = new ClientConnectionRegistry();
 
     public static void main(String[] args) throws Exception {
         Database.migrate();
@@ -45,9 +47,47 @@ public final class SocketServer {
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
             socket.setSoTimeout(15000);
-            String response = process(reader.readLine());
+            String request = reader.readLine();
+            if (request != null && request.startsWith("EVENTS\t")) {
+                handleEventConnection(socket, reader, writer, request);
+                return;
+            }
+            String response = process(request);
             writer.write(response); writer.newLine(); writer.flush();
         } catch (Exception e) { System.err.println("Client request failed: " + e.getMessage()); }
+    }
+
+    private static void handleEventConnection(Socket socket, BufferedReader reader, BufferedWriter writer, String request) {
+        ClientConnectionRegistry.Subscriber subscriber = null;
+        try {
+            String[] fields = request.split("\\t", -1);
+            if (fields.length != 2) throw new IllegalArgumentException("Invalid event subscription request.");
+            String token = dec(fields[1]);
+            Long userId = SESSIONS.get(token);
+            if (userId == null) throw new IllegalArgumentException("Session expired. Please sign in again.");
+
+            socket.setSoTimeout(0);
+            writer.write("OK\t" + enc(JSON.writeValueAsString(Map.of("eventChannel", "CONNECTED"))));
+            writer.newLine();
+            writer.flush();
+            subscriber = CONNECTIONS.register(userId, token, socket, writer);
+            if (!SESSIONS.containsKey(token))
+                throw new IllegalArgumentException("Session expired. Please sign in again.");
+            writer.write("EVENT\t" + enc(JSON.writeValueAsString(Map.of("event", "CONNECTED", "data", Map.of()))));
+            writer.newLine();
+            writer.flush();
+            while (reader.readLine() != null) {
+                // The event channel is server-push only. Client lines are reserved for future heartbeats.
+            }
+        } catch (IllegalArgumentException e) {
+            try { writer.write("ERROR\t" + enc(e.getMessage())); writer.newLine(); writer.flush(); } catch (IOException ignored) { }
+        } catch (IOException e) {
+            System.out.println("Realtime connection closed: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Could not establish realtime connection: " + e.getMessage());
+        } finally {
+            CONNECTIONS.unregister(subscriber);
+        }
     }
 
     private static String process(String request) {
@@ -72,8 +112,25 @@ public final class SocketServer {
                     case "OPEN_DIRECT" -> { require(f,3); yield Map.of("conversationId",CHAT.openDirectConversation(me,Long.parseLong(dec(f[2])))); }
                     case "CONVERSATIONS" -> CHAT.conversations(me);
                     case "MESSAGES" -> { require(f,3); yield CHAT.messages(me,Long.parseLong(dec(f[2])),200); }
-                    case "SEND_MESSAGE" -> { require(f,4); yield CHAT.sendMessage(me,Long.parseLong(dec(f[2])),dec(f[3])); }
-                    case "LOGOUT" -> { SESSIONS.remove(dec(f[1])); AUTH.setOnlineStatus(me,"HORS_LIGNE"); yield Map.of("message","Signed out."); }
+                    case "SEND_MESSAGE" -> {
+                        require(f,4);
+                        long conversationId = Long.parseLong(dec(f[2]));
+                        Map<String,Object> message = CHAT.sendMessage(me, conversationId, dec(f[3]));
+                        Map<String,Object> event = Map.of(
+                                "event", "MESSAGE_RECEIVED",
+                                "data", Map.of("conversationId", conversationId, "message", message));
+                        for (Long recipientId : CHAT.activeParticipantIds(me, conversationId)) {
+                            CONNECTIONS.publish(recipientId, event);
+                        }
+                        yield message;
+                    }
+                    case "LOGOUT" -> {
+                        String token = dec(f[1]);
+                        SESSIONS.remove(token);
+                        CONNECTIONS.closeToken(token);
+                        AUTH.setOnlineStatus(me,"HORS_LIGNE");
+                        yield Map.of("message","Signed out.");
+                    }
                     default -> throw new IllegalArgumentException("Unknown request.");
                 };
             }

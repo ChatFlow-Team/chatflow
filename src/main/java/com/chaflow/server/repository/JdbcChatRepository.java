@@ -20,4 +20,5 @@ public final class JdbcChatRepository implements ChatRepository {
     public List<Map<String,Object>> conversations(long me)throws SQLException{return dao.conversations(me);}
     public List<Map<String,Object>> messages(long me,long conversation,int limit)throws SQLException{return dao.messages(me,conversation,limit);}
     public Map<String,Object> sendMessage(long me,long conversation,String content)throws SQLException{return dao.sendMessage(me,conversation,content);}
+    public List<Long> activeParticipantIds(long me,long conversation)throws SQLException{return dao.activeParticipantIds(me,conversation);}
 }

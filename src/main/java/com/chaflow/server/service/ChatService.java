@@ -44,4 +44,8 @@ public final class ChatService {
             throw new IllegalArgumentException("Message must contain 1–4000 characters.");
         return repository.sendMessage(me,conversation,content);
     }
+    public List<Long> activeParticipantIds(long me,long conversation)throws SQLException {
+        if(conversation<=0) throw new IllegalArgumentException("Invalid conversation.");
+        return repository.activeParticipantIds(me,conversation);
+    }
 }
