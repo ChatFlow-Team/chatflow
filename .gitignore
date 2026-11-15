@@ -5,3 +5,5 @@ target/
 .DS_Store
 repomix-output.xml
 .env
+
+node_modules/

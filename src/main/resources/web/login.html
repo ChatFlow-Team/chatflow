@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Connexion · ChatFlow</title>
+  <link rel="stylesheet" href="chatflow.css">
+  <script src="auth.js" defer></script>
+  <script src="login.js" defer></script>
+</head>
+<body>
+  <div class="auth-window">
+    <aside class="auth-brand">
+      <img src="chatflow.svg" alt="" width="64" height="52">
+      <span>ChatFlow</span>
+    </aside>
+    <main class="auth-content">
+      <div class="auth-panel">
+        <form id="auth-form" class="flex flex-col gap-3" novalidate>
+          <h1 class="auth-title">Connexion</h1>
+          <label class="auth-field" for="phone">Numéro de téléphone
+            <input class="auth-input" id="phone" type="tel" autocomplete="username" placeholder="+212 600 000 000" required autofocus>
+          </label>
+          <label class="auth-field" for="password">Mot de passe
+            <input class="auth-input" id="password" type="password" autocomplete="current-password" placeholder="Votre mot de passe" required>
+          </label>
+          <p class="auth-alert" id="error" role="alert" hidden></p>
+          <button class="primary" id="submit" type="submit">Se connecter</button>
+          <button class="secondary" id="alternate" type="button">Créer un compte</button>
+        </form>
+        <section id="welcome" hidden>
+          <p class="rounded-lg bg-[#e7f4ec] px-3 py-2 text-[13px] font-semibold text-success" role="status">✓ Vous êtes connecté</p>
+          <h1 class="auth-title my-3" id="greeting" tabindex="-1"></h1>
+          <div class="mb-3 rounded-xl bg-canvas p-5">
+            <h2 class="font-semibold">Messages</h2>
+            <p class="mt-2 text-sm text-muted" id="conversation-summary" aria-live="polite"></p>
+          </div>
+          <button class="primary w-full" id="open-messenger" type="button">Ouvrir la messagerie</button>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

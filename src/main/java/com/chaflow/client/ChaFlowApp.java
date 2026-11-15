@@ -6,8 +6,7 @@ import com.chaflow.client.controller.ChatController;
 import com.chaflow.client.service.SocketService;
 import com.chaflow.client.service.AuthService;
 import com.chaflow.client.service.ChatService;
-import com.chaflow.client.view.AuthView;
-import com.chaflow.client.view.LoginView;
+import com.chaflow.client.view.LocalWebView;
 import com.chaflow.client.view.RegisterView;
 import com.chaflow.client.view.ChatView;
 import com.chaflow.client.view.MessengerView;
@@ -38,16 +37,104 @@ public class ChaFlowApp extends Application {
     private VBox messageList; private TextField messageInput; private Label chatTitle; private VBox conversationItems; private VBox searchResults; private VBox requestItems; private VBox friendItems; private Label status;
 
     @Override public void start(Stage stage){this.stage=stage;showAuth();stage.show();}
-    private void showAuth(){
-        LoginView login=new LoginView((button,credentials)->authenticate(button,()->authController.login(credentials.phone(),credentials.password())));
-        RegisterView register=new RegisterView((button,data)->authenticate(button,()->authController.register(data.phone(),data.username(),data.displayName(),data.password())),message->status.setText(message));
-        AuthView view=new AuthView(login,register);
-        status=view.status();
-        stage.setTitle("ChaFlow — Sign in");stage.setScene(new Scene(view.root(),520,570));
+    private LocalWebView authPage;
+
+    private void showAuth() {
+        showAuthPage("Connexion", new LocalWebView("login.html", new LoginActions()));
     }
-    private void authenticate(Button button,java.util.function.Supplier<SocketClient.AuthResult> call){button.setDisable(true);status.setText("Connecting…");io.submit(()->{SocketClient.AuthResult r=call.get();Platform.runLater(()->{button.setDisable(false);if(r.successful()){account=r;showMessenger();}else status.setText(r.message());});});}
+
+    private void showAuthPage(String title, LocalWebView page) {
+        if (authPage != null) authPage.detach();
+        authPage = page;
+        stage.setTitle("ChatFlow — " + title);
+        stage.setScene(new Scene(page.root(), 764, 604));
+        stage.sizeToScene();
+        page.root().requestFocus();
+    }
+
+    public final class LoginActions {
+        public void login(String phone, String password) {
+            LocalWebView page = authPage;
+            io.submit(() -> {
+                SocketClient.AuthResult result = authController.login(phone, password);
+                Platform.runLater(() -> {
+                    if (authPage != page) return;
+                    if (!result.successful()) {
+                        page.call("authFailed", loginError(result.message()));
+                        return;
+                    }
+
+                    account = result;
+                    page.call("authSucceeded", result.displayName());
+                    page.call("updateConversationSummary", -1);
+                    io.submit(() -> {
+                        try {
+                            int count = messengerController.conversations(result.token()).size();
+                            Platform.runLater(() -> page.call("updateConversationSummary", count));
+                        } catch (IOException ignored) {
+                            // The welcome screen can still open the messenger after a preview failure.
+                        }
+                    });
+                });
+            });
+        }
+
+        public void openRegistration() {
+            if (account == null) showRegistration();
+        }
+
+        public void openMessenger() {
+            if (account != null) showMessenger();
+        }
+    }
+
+    private static String loginError(String message) {
+        if ("Incorrect phone number or password.".equals(message)) {
+            return "Numéro de téléphone ou mot de passe incorrect.";
+        }
+        return message;
+    }
+
+    private void showRegistration() {
+        authPage.detach();
+        authPage = null;
+        Label feedback = new Label();
+        feedback.setWrapText(true);
+        Button back = new Button("Déjà un compte ? Se connecter");
+        RegisterView register = new RegisterView((button, data) -> {
+            button.setDisable(true);
+            back.setDisable(true);
+            feedback.setText("Inscription en cours…");
+            Scene page = stage.getScene();
+            io.submit(() -> {
+                SocketClient.AuthResult result = authController.register(
+                        data.phone(), data.username(), data.displayName(), data.password());
+                Platform.runLater(() -> {
+                    if (stage.getScene() != page) return;
+                    button.setDisable(false);
+                    back.setDisable(false);
+                    if (result.successful()) {
+                        account = result;
+                        showMessenger();
+                    } else {
+                        feedback.setText(result.message());
+                    }
+                });
+            });
+        }, feedback::setText);
+        back.setOnAction(event -> showAuth());
+        VBox page = new VBox(12, register.root(), feedback, back);
+        page.setPadding(new Insets(20));
+        stage.setTitle("ChatFlow — Inscription");
+        stage.setScene(new Scene(page, 520, 570));
+        stage.sizeToScene();
+    }
 
     private void showMessenger(){
+        if (authPage != null) {
+            authPage.detach();
+            authPage = null;
+        }
         BorderPane root=new BorderPane();root.setStyle("-fx-background-color:#f4f7f9;");
         VBox sidebar=new VBox(12);sidebar.setPadding(new Insets(18));sidebar.setPrefWidth(330);sidebar.setStyle("-fx-background-color:white;-fx-border-color:#e5e7eb;-fx-border-width:0 1 0 0;");
         HBox top=new HBox(8);Label brand=new Label("ChaFlow");brand.setFont(Font.font(23));brand.setStyle("-fx-font-weight:bold;-fx-text-fill:#16a085;");Region spacer=new Region();HBox.setHgrow(spacer,Priority.ALWAYS);Button logout=new Button("Sign out");logout.setOnAction(e->{SocketClient.AuthResult previous=account;selectedConversation=-1;closeEventConnection();io.submit(()->{authController.logout(previous.token());Platform.runLater(()->{account=null;showAuth();});});});top.getChildren().addAll(brand,spacer,logout);
@@ -61,7 +148,7 @@ public class ChaFlowApp extends Application {
         chatView=new ChatView(this::sendMessage);chatTitle=chatView.title();messageList=chatView.messages();messageInput=chatView.input();
         status=new Label("Ready");
         MessengerView messengerView=new MessengerView(sidebar,chatView,status);
-        stage.setTitle("ChaFlow — Messages");stage.setScene(new Scene(messengerView.root(),1120,760));refreshAll();startEventConnection();
+        stage.setTitle("ChaFlow — Messages");stage.setScene(new Scene(messengerView.root(),1120,760));stage.sizeToScene();refreshAll();startEventConnection();
     }
     private void startEventConnection(){
         closeEventConnection();

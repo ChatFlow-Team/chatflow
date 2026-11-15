@@ -1,0 +1,10 @@
+{
+  "name": "chatflow-ui",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -c ui/tailwind.config.cjs -i ui/tailwind.css -o src/main/resources/web/chatflow.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}
