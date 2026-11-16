@@ -1,15 +1,29 @@
-# ChaFlow — JavaFX + PostgreSQL + Flyway + Docker
+# ChaFlow — JavaFX + Java Socket Server + PostgreSQL + Flyway + Docker
 
-ChaFlow is a Java 21 desktop client with a Java TCP authentication server and PostgreSQL database. Database schema and demo data are managed by **Flyway migrations**. There is no separate SQL seeder container and no local PostgreSQL socket connection.
+ChaFlow is a Java 21 desktop messaging application. The JavaFX client communicates with a Java TCP socket server. The server authenticates accounts, manages sessions, user discovery, friend requests, direct conversations and message history. PostgreSQL runs in Docker and Flyway owns every schema change.
+
+## Implemented
+
+- Phone-number registration and login; usernames are unique.
+- PBKDF2 password hashing (no plaintext passwords stored).
+- Server-issued in-memory session token required for every authenticated operation.
+- Account discovery by username, display name or phone number.
+- Optional friend system: send, accept, decline and remove friends; list incoming requests and accepted friends.
+- Direct conversations can be opened with any registered user, whether or not the two users are friends.
+- A unique canonical user pair prevents duplicate private conversations, including concurrent creation attempts.
+- Conversation creation and participant insertion run in one database transaction.
+- Send and retrieve text messages; server verifies conversation membership before reading or sending.
+- Message history is presented oldest-to-newest. The TCP event stream refreshes the selected history and conversation previews as messages arrive.
+- Docker Compose starts PostgreSQL and the socket server; Flyway runs automatically at server startup.
 
 ## Requirements
 
 - Docker Engine and Docker Compose plugin
-- JDK 21 and Maven 3.9+ (only to run the JavaFX desktop client locally)
+- JDK 21 and Maven 3.9+ (to run the JavaFX desktop client locally)
 
-## 1. Start PostgreSQL and the server
+## 1. Start database and socket server
 
-From the project root (the directory containing `docker-compose.yml`):
+From the project root (where `docker-compose.yml` is located):
 
 ```bash
 docker compose up --build -d
@@ -24,46 +38,70 @@ docker compose ps
 docker compose logs -f chaflow-server
 ```
 
-Expected log messages include:
+The server waits for the PostgreSQL health check, runs pending Flyway migrations, then listens on TCP port `5050`.
 
-```text
-Flyway migrations completed. ChaFlow database is ready.
-ChaFlow authentication server listening on port 5050
-```
-
-## 2. Verify Flyway and demo accounts
+## 2. Verify migrations and accounts
 
 ```bash
 docker compose exec postgres psql -U postgres -d chatflow_db -c "SELECT installed_rank, version, description, success FROM chatflow.flyway_schema_history ORDER BY installed_rank;"
 docker compose exec postgres psql -U postgres -d chatflow_db -c "SELECT id_utilisateur, numero_telephone, pseudo, nom_affiche FROM chatflow.utilisateur ORDER BY id_utilisateur;"
 ```
 
-The migrations are in `server/src/main/resources/db/migration`:
+Migrations:
 
-- `V1__create_chatflow_schema.sql` creates the `chatflow` schema and tables used by the existing DAO classes.
-- `V2__insert_demo_users.sql` inserts four sample accounts. Flyway records each successful migration in `chatflow.flyway_schema_history` and will not run it again. If a non-empty development schema already exists without Flyway metadata, Flyway baselines it at version 0, then applies V1 and V2; the V1 table creation statements are idempotent.
+- `V1__create_chatflow_schema.sql`: users, conversations, participants, messages and recipient statuses.
+- `V2__insert_demo_users.sql`: four demo accounts.
+- `V3__friends_and_private_conversations.sql`: optional friend requests/friendships, canonical direct-conversation pair, activity timestamp and indexes.
 
-## 3. Run the JavaFX desktop client
+**Do not edit an applied migration.** Add future changes as `V4__...sql`, `V5__...sql`, etc. V3 is additive and does not drop existing tables or messages.
 
-Keep Docker running. In a second terminal, from the project root:
+## 3. Run the JavaFX client
+
+Keep Docker running. In another terminal, from the project root:
 
 ```bash
 mvn clean javafx:run
 ```
 
-The desktop app connects to `127.0.0.1:5050`. To use another server address:
+The client defaults to `127.0.0.1:5050`. To use another server host/port:
 
 ```bash
-mvn javafx:run -Djavafx.args="-Dchaflow.host=192.168.1.10"
+mvn javafx:run -Djavafx.args="-Dchaflow.host=192.168.1.10 -Dchaflow.port=5050"
 ```
+
+### Regenerate the WebView stylesheet
+
+After editing the HTML, JavaScript or Tailwind source, run these commands from the project root:
+
+```bash
+npm ci
+npm run build:css
+```
+
+Tailwind CSS 3.4.19 scans the HTML and JavaScript under `src/main/resources/web`.
+Commit the generated `chatflow.css` along with its source changes. Maven copies the
+HTML, JavaScript, CSS, font and logo from this directory into the client resources.
+JavaFX 21.0.6 reads these local resources at launch. Node.js is only used to regenerate
+the stylesheet. [Inter 4.1](https://github.com/rsms/inter/releases/tag/v4.1) is bundled as static TrueType fonts with the OFL license.
+
+On an ARM64 Docker host, build and run the TCP server in AMD64 mode because JavaFX
+21.0.6's Linux ARM64 artifacts are unavailable in Maven Central:
+
+```bash
+DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose up --build -d
+```
+
+Successful registration signs the new account in and opens the messenger directly.
+Signing in afterwards opens the welcome screen, where the messenger can be opened.
+
+The messenger opens with a 1216 × 680 content area. Resize it to 880 × 600
+to review the compact layout. Docker Compose runs PostgreSQL and the TCP server.
+Start the JavaFX client on the host with the Maven JavaFX goal above. The
+shaded `target/chaflow-server.jar` is the TCP server entry point.
 
 ## 4. Demo accounts
 
-All four demo accounts use this password:
-
-```text
-ChatFlow123!
-```
+All demo accounts use the password `ChatFlow123!`.
 
 | Display name | Phone number | Username |
 |---|---|---|
@@ -72,30 +110,96 @@ ChatFlow123!
 | Amina Demo | +212600000003 | amina_demo |
 | Omar Demo | +212600000004 | omar_demo |
 
-You can also create a new account from the **Create account** tab. Phone numbers and usernames must be unique. Passwords are stored as PBKDF2-HMAC-SHA256 hashes, never as plain text.
+## 5. How to use the new features
 
-## 5. Database configuration
+1. Sign in with two different demo accounts (run two client instances to test both sides).
+2. In **Find by username or phone number**, search for a registered user.
+3. Select **Message** to open or create a direct conversation. No friend request is required.
+4. Select **+ Friend** to send a friend request. The recipient sees it under **Friend requests** and can accept or decline.
+5. Accepted users appear under **Friends**. Removing a friend does not delete the direct conversation or its message history.
+6. Send messages. The other client refreshes messages and conversation previews approximately every three seconds.
 
-Docker Compose defaults are for local development:
+## 6. Database and environment configuration
+
+Docker Compose development defaults:
 
 - Database: `chatflow_db`
 - User: `postgres`
 - Password: `chatflow_dev_password`
-- Host port on your machine: `5433`
-- Hostname used by the server container: `postgres:5432`
+- Host PostgreSQL port: `5433` (container port `5432`)
+- Socket server port: `5050`
 
-Override with environment variables `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_HOST_PORT`. Keep real credentials out of source control. The PostgreSQL data is stored in the named Docker volume `chaflow-postgres-data`.
+Override `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST_PORT` in the shell or a local `.env` file. `DB_URL`, `DB_USER`, `DB_PASSWORD` configure the server container. Do not commit real credentials.
 
-## 6. Stop services safely
+The PostgreSQL data is persisted in the named Docker volume `chaflow-postgres-data`.
+
+## 7. Stop services safely
 
 ```bash
 docker compose down
 ```
 
-This stops containers but preserves the database volume. **Do not use `docker compose down -v` unless you intentionally want to delete the database and all its data.**
+This stops containers but preserves the database volume. **Do not run `docker compose down -v` unless you intentionally want to delete the database and all its data.**
 
-## Notes
+## Security and current scope
 
-- Flyway migrations run inside the Java server container using the Docker service hostname `postgres`; they do not use `/var/run/postgresql`.
-- Add future schema changes as new files such as `V3__add_profile_fields.sql`. Do not edit a migration that has already been applied to a shared database.
-- This TCP authentication protocol is intended for local coursework/development. Do not expose port `5050` to the public internet without adding TLS and stronger session/security controls.
+This is a coursework/development implementation. The session token is held in server memory and the current TCP connection is not encrypted. Do not expose port `5050` to the public internet. Production deployment needs TLS, persistent/revocable sessions, rate limiting, robust phone-number verification, and a persistent push/event channel. The current client polls for new messages every three seconds; it is not yet a server-push WebSocket-style implementation. Group chat, attachments, read receipts and message editing/deletion are not included in this iteration.
+
+
+## Application architecture
+
+The code is organized into explicit layers. The existing socket wire format and
+database schema are retained.
+
+### JavaFX client (`src/main/java/com/chaflow/client`)
+
+- `view`: the local WebView host and messenger actions. The connection, registration and messenger pages live in `src/main/resources/web`.
+- `controller`: UI action coordinators (`AuthController`, `MessengerController`,
+  `ChatController`).
+- `service`: client use cases and the socket transport adapter (`AuthService`,
+  `ChatService`, `SocketService`).
+- `model`: client domain records (`User`, `Message`, `Conversation`,
+  `FriendRequest`).
+- `SocketClient`: low-level implementation of the existing TCP protocol.
+- `ChaFlowApp`: JavaFX application entry point and screen lifecycle.
+
+### Socket server (`src/main/java/com/chaflow/server`)
+
+- `SocketServer`: TCP lifecycle, request framing, session lookup and response
+  serialization only.
+- `controller`: socket-facing request controllers.
+- `service`: application use cases and validation (`AuthService`, `ChatService`).
+- `auth`: password hashing utilities.
+- `repository`: persistence contracts and JDBC repository adapters.
+- `dao`: SQL and JDBC mapping, including `ChatDAO` and the existing entity DAOs.
+- `model`: persistence/domain records and enums.
+- `db` and `config`: shared PostgreSQL DataSource, Flyway and runtime settings.
+
+The server dependency direction is:
+`SocketServer -> Controller -> Service -> Repository -> DAO -> PostgreSQL` for both chat and authentication.
+The JavaFX client never receives database credentials and only communicates
+with the server over the existing socket protocol.
+
+### Verification checklist
+
+After extracting the project, use Java 21 and run:
+
+```bash
+cd chatflow/server
+mvn clean package
+cd ..
+mvn clean javafx:run
+```
+
+For Docker-backed server startup, from `chatflow/` run:
+
+```bash
+docker compose up --build -d
+docker compose logs -f chaflow-server
+```
+
+Run the manual acceptance checks in this order: create an account, sign out,
+sign in, search another account by username and phone, send/accept a friend
+request, start a direct conversation, send a message, restart the client, and
+confirm message history is still present. The ZIP integrity check is not a
+substitute for these runtime integration tests.
