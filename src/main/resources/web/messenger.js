@@ -10,6 +10,81 @@ let accountId;
 let selectedId;
 let conversations = [];
 
+// Conserver un seul contexte audio
+let audioContext = null;
+
+function playSendSound() {
+  try {
+    const AudioContextClass =
+        window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      console.warn("AudioContext n'est pas disponible.");
+      return;
+    }
+
+    // Créer le contexte une seule fois
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+    }
+
+    const play = () => {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = "sine";
+
+      oscillator.frequency.setValueAtTime(
+          750,
+          audioContext.currentTime
+      );
+
+      oscillator.frequency.exponentialRampToValueAtTime(
+          450,
+          audioContext.currentTime + 0.10
+      );
+
+      gain.gain.setValueAtTime(
+          0.0001,
+          audioContext.currentTime
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+          0.15,
+          audioContext.currentTime + 0.01
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          audioContext.currentTime + 0.15
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+
+      oscillator.onended = () => {
+        oscillator.disconnect();
+        gain.disconnect();
+      };
+
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.16);
+    };
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().then(play).catch(error => {
+        console.error("Erreur audio :", error);
+      });
+    } else {
+      play();
+    }
+
+  } catch (error) {
+    console.error("Impossible de jouer le son :", error);
+  }
+}
+
+
 function element(tag, classes, text) {
   const node = document.createElement(tag);
   if (classes) node.className = classes;
@@ -128,7 +203,10 @@ function selectConversation(id, name, username, status) {
 
 function showMessages(id, payload) {
   if (id !== selectedId) return;
-  const rows = JSON.parse(payload);
+  const rows = JSON.parse(payload).sort((a, b) => {
+    return new Date(a.sentAt).getTime() -
+        new Date(b.sentAt).getTime();
+  });
   const history = byId('history');
   const list = byId('messages');
   const previousHeight = history.scrollHeight;
@@ -242,10 +320,18 @@ window.chatflowReady = function () {
   });
   byId('composer').addEventListener('submit', event => {
     event.preventDefault();
+
     const body = message.value.trim();
+
     if (!selectedId || !body || pending.has(selectedId)) return;
+
     pending.add(selectedId);
     send.disabled = true;
+
+    // Jouer le petit son d'envoi
+    playSendSound();
+
+    // Envoyer le message au serveur
     window.chatflow.send(body);
   });
   byId('logout').addEventListener('click', () => {
