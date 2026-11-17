@@ -157,7 +157,5 @@ public class ChaFlowApp extends Application {
         io.shutdown();
     }
 
-    public static void main(String[] args) {
-        launch(args);
-    }
+    public static void main(String[] args) { launch(args); }
 }

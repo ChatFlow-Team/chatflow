@@ -27,6 +27,13 @@ From the project root (where `docker-compose.yml` is located):
 
 ```bash
 docker compose up --build -d
+```
+
+The server waits until PostgreSQL is healthy, then runs all pending Flyway migrations before opening TCP port `5050`.
+
+Check startup:
+
+```bash
 docker compose ps
 docker compose logs -f chaflow-server
 ```
