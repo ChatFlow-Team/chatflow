@@ -13,6 +13,10 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import javafx.application.Platform;
 import javafx.scene.web.WebView;
+import javafx.stage.FileChooser;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
 
 public final class MessengerView {
     // PostgreSQL bigint identifiers must survive the trip through JavaScript without rounding.
@@ -225,6 +229,58 @@ public final class MessengerView {
                         page.call("messageFinished", Long.toString(id), body, false);
                         status(errorMessage(error));
                     });
+                }
+            });
+        }
+
+        public void upload(String filename, String contentType, String base64Data) {
+            long id = selectedId;
+            if (id < 0) { status("Sélectionnez une conversation."); return; }
+            if (base64Data == null || base64Data.length() > 17_000_000) {
+                status("Fichier trop volumineux (maximum 12 Mo)."); return;
+            }
+            status("Envoi du fichier…");
+            run(() -> {
+                try {
+                    chat.uploadAttachment(account.token(), id, filename, contentType, base64Data);
+                    onUi(() -> {
+                        status("Fichier envoyé.");
+                        if (selectedId == id) loadHistory(); else refreshConversations();
+                    });
+                } catch (IOException error) {
+                    onUi(() -> status(errorMessage(error)));
+                }
+            });
+        }
+
+        public void previewAttachment(String blobId) {
+            run(() -> {
+                try {
+                    Map<String,Object> result = chat.downloadAttachment(account.token(), Long.parseLong(blobId));
+                    String mime = Objects.toString(result.get("contentType"), "application/octet-stream");
+                    if (!mime.startsWith("image/")) return;
+                    String data = Objects.toString(result.get("data"), "");
+                    onUi(() -> page.call("showAttachmentPreview", blobId, mime, data));
+                } catch (Exception error) {
+                    onUi(() -> status(errorMessage(error)));
+                }
+            });
+        }
+
+        public void downloadAttachment(String blobId) {
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Enregistrer la pièce jointe");
+            java.io.File destination = chooser.showSaveDialog(page.root().getScene() == null
+                    ? null : page.root().getScene().getWindow());
+            if (destination == null) return;
+            run(() -> {
+                try {
+                    Map<String,Object> result = chat.downloadAttachment(account.token(), Long.parseLong(blobId));
+                    byte[] bytes = Base64.getDecoder().decode(Objects.toString(result.get("data"), ""));
+                    Files.write(destination.toPath(), bytes);
+                    onUi(() -> status("Fichier enregistré : " + destination.getName()));
+                } catch (Exception error) {
+                    onUi(() -> status(errorMessage(error)));
                 }
             });
         }

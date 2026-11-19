@@ -4,6 +4,8 @@ const byId = id => document.getElementById(id);
 const search = byId('search');
 const message = byId('message');
 const send = byId('send');
+const attachment = byId('attachment');
+const attach = byId('attach');
 const drafts = new Map();
 const pending = new Set();
 let accountId;
@@ -194,6 +196,7 @@ function selectConversation(id, name, username, status) {
     selectedId = id;
     message.value = drafts.get(id) || '';
     message.disabled = false;
+    attach.disabled = false;
     send.disabled = pending.has(id);
     byId('messages').replaceChildren(element('p', 'text-center text-sm text-muted', 'Chargement…'));
   }
@@ -235,10 +238,23 @@ function showMessages(id, payload) {
       line.append(avatar);
     }
     const bubble = element('div', mine ? 'message-bubble message-sent' : 'message-bubble');
-    bubble.append(
-      element('p', 'whitespace-pre-wrap', entry.content),
-      element('p', mine ? 'text-[10px] text-white' : 'text-[10px] text-muted', timeLabel(date))
-    );
+    if (entry.attachment) {
+      const file = entry.attachment;
+      const download = element('button', 'break-all text-left text-sm font-semibold underline', '📎 ' + file.filename + ' · Télécharger');
+      download.type = 'button';
+      download.addEventListener('click', () => window.chatflow.downloadAttachment(String(file.id)));
+      bubble.append(download);
+      if (String(file.contentType || '').startsWith('image/') && Number(file.byteSize || 0) <= 4 * 1024 * 1024) {
+        const preview = element('img', 'mt-2 max-h-56 max-w-full rounded-lg object-contain');
+        preview.dataset.attachmentId = String(file.id);
+        preview.alt = file.filename;
+        bubble.append(preview);
+        window.chatflow.previewAttachment(String(file.id));
+      }
+    } else {
+      bubble.append(element('p', 'whitespace-pre-wrap', entry.content || ''));
+    }
+    bubble.append(element('p', mine ? 'text-[10px] text-white' : 'text-[10px] text-muted', timeLabel(date)));
     line.append(bubble);
     list.append(line);
   }
@@ -334,11 +350,34 @@ window.chatflowReady = function () {
     // Envoyer le message au serveur
     window.chatflow.send(body);
   });
+  attach.addEventListener('click', () => attachment.click());
+  attachment.addEventListener('change', () => {
+    const file = attachment.files && attachment.files[0];
+    if (!file) return;
+    if (file.size > 12 * 1024 * 1024) {
+      showStatus('Fichier trop volumineux (maximum 12 Mo).');
+      attachment.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const encoded = String(reader.result).split(',', 2)[1] || '';
+      window.chatflow.upload(file.name, file.type || 'application/octet-stream', encoded);
+      attachment.value = '';
+    };
+    reader.onerror = () => showStatus('Impossible de lire ce fichier.');
+    reader.readAsDataURL(file);
+  });
   byId('logout').addEventListener('click', () => {
     byId('logout').disabled = true;
     window.chatflow.logout();
   });
   window.chatflow.ready();
+};
+
+window.showAttachmentPreview = function (id, mime, base64) {
+  const image = document.querySelector('img[data-attachment-id="' + String(id).replace(/[^0-9]/g, '') + '"]');
+  if (image) image.src = 'data:' + mime + ';base64,' + base64;
 };
 
 function historyFailed(id) {

@@ -20,5 +20,7 @@ public final class ChatService {
     public long openDirect(String token,long id)throws IOException{return socket.openDirect(token,id);}
     public List<Map<String,Object>> messages(String token,long id)throws IOException{return socket.messages(token,id);}
     public Map<String,Object> sendMessage(String token,long id,String body)throws IOException{return socket.sendMessage(token,id,body);}
+    public Map<String,Object> uploadAttachment(String token,long id,String name,String mime,String data)throws IOException{return socket.uploadAttachment(token,id,name,mime,data);}
+    public Map<String,Object> downloadAttachment(String token,long blobId)throws IOException{return socket.downloadAttachment(token,blobId);}
     public SocketClient.EventConnection listenEvents(String token, Consumer<Map<String,Object>> onEvent, Consumer<Exception> onError){return socket.listenEvents(token,onEvent,onError);}
 }
