@@ -30,10 +30,15 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-chatflow_db}
       DB_USER: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-chatflow_dev_password}
+      CHAFLOW_STORAGE_ROOT: /app/storage
     ports:
       - "5050:5050"
+    volumes:
+      - chaflow-storage:/app/storage
     restart: unless-stopped
 
 volumes:
   chaflow-postgres-data:
     name: chaflow-postgres-data
+  chaflow-storage:
+    name: chaflow-storage

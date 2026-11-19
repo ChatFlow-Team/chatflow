@@ -7,3 +7,4 @@ repomix-output.xml
 .env
 
 node_modules/
+\n# Uploaded attachments are private runtime data; do not commit them.\nstorage/*\n!storage/.local-storage\n

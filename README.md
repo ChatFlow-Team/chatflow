@@ -203,3 +203,97 @@ sign in, search another account by username and phone, send/accept a friend
 request, start a direct conversation, send a message, restart the client, and
 confirm message history is still present. The ZIP integrity check is not a
 substitute for these runtime integration tests.
+
+
+## Pièces jointes (images et fichiers)
+
+ChaFlow intègre maintenant un stockage sur disque inspiré de **Ruby on Rails Active Storage**.
+Les octets des fichiers ne sont pas enregistrés dans PostgreSQL : la base conserve les métadonnées
+(blob) et l'association avec le message (attachment), tandis que les fichiers sont écrits sur disque.
+
+### Fonctionnalités
+- Joindre une image ou un fichier depuis la barre de rédaction (bouton `+`).
+- Images affichées en aperçu dans la conversation.
+- Documents et autres fichiers téléchargeables depuis le message.
+- Historique des messages enrichi avec les métadonnées des pièces jointes.
+- Contrôle d'appartenance à la conversation avant l'envoi et le téléchargement.
+- Taille maximale : **12 Mo par fichier**.
+
+Le flux client est relié de bout en bout : `MessengerView` appelle `ChatController`,
+qui délègue à `ChatService`, puis `SocketService` et `SocketClient`. Les méthodes
+`uploadAttachment(...)` et `downloadAttachment(...)` sont exposées dans le contrôleur
+pour éviter les erreurs de compilation `cannot find symbol` lors du build Maven.
+- Le type MIME et le nom du fichier sont conservés ; les fichiers sont téléchargés, pas exécutés par le serveur.
+
+### Organisation du stockage
+
+```text
+storage/
+├── .local-storage
+└── 2a/
+    └── 7f/
+        └── <generated-file-key>
+```
+
+Chaque clé est générée aléatoirement. Le chemin est dérivé des deux premiers groupes de caractères
+de la clé, comme dans le service Disk d'Active Storage.
+
+### Base de données et migration
+
+Flyway applique automatiquement `V4__active_storage_attachments.sql` au démarrage du serveur.
+Cette migration ajoute uniquement :
+- `chatflow.active_storage_blobs` : clé, nom, type MIME, taille et checksum SHA-256 ;
+- `chatflow.active_storage_attachments` : association entre un blob et un message.
+
+Les tables métier existantes (`utilisateur`, `conversation`, `participant`, `message`,
+`message_destinataire`, etc.) sont conservées. Les messages fichiers utilisent le type déjà prévu
+`FICHIER`. Aucune table métier existante n'est remplacée.
+
+### Démarrage avec Docker
+
+Depuis le dossier du projet :
+
+```bash
+docker compose up --build -d
+docker compose logs -f chaflow-server
+```
+
+Le volume Docker `chaflow-storage` conserve les fichiers lorsque le conteneur serveur est recréé.
+La base PostgreSQL reste dans son volume indépendant `chaflow-postgres-data`.
+
+Pour inspecter les volumes :
+
+```bash
+docker volume inspect chaflow-storage
+docker compose down
+```
+
+**Attention :** `docker compose down -v` supprime aussi les volumes et donc les données persistantes.
+Ne l'utilisez pas si vous souhaitez conserver les fichiers et la base.
+
+### Démarrage local du serveur
+
+Définissez `CHAFLOW_STORAGE_ROOT` si vous souhaitez choisir un autre dossier :
+
+```bash
+export CHAFLOW_STORAGE_ROOT="$PWD/storage"
+mvn -DskipTests package
+java -jar target/chaflow-server.jar
+```
+
+Le client JavaFX peut ensuite être lancé avec :
+
+```bash
+mvn javafx:run
+```
+
+Le client et le serveur doivent utiliser le même port/adresse configurés (`chaflow.host`,
+`chaflow.port`). En mode Docker, le serveur écoute sur le port `5050`.
+
+### Limites et exploitation
+- La limite de 12 Mo évite de faire transiter des fichiers illimités dans le protocole socket actuel.
+- Les fichiers sont privés : un utilisateur doit être membre actif de la conversation pour les récupérer.
+- Prévoir une sauvegarde conjointe de PostgreSQL **et** du volume `chaflow-storage` : sauvegarder uniquement
+  la base ne sauvegarde pas le contenu binaire.
+- Pour une production exposée sur Internet, ajouter antivirus/scan de contenu, quotas par utilisateur,
+  chiffrement au repos, limitation de débit et un mécanisme de nettoyage des blobs orphelins.

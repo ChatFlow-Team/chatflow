@@ -59,7 +59,9 @@
         <div id="history" class="min-h-0 flex-1 overflow-y-auto px-5 py-5" aria-label="Historique des messages" tabindex="0">
           <div id="messages" class="flex flex-col gap-3"></div>
         </div>
-        <form id="composer" class="flex h-[65px] shrink-0 items-center gap-2.5 border-t border-line bg-white px-4">
+        <form id="composer" class="flex h-[65px] shrink-0 items-center gap-2 border-t border-line bg-white px-3">
+          <input id="attachment" type="file" hidden accept="*/*">
+          <button id="attach" class="h-[38px] w-[42px] shrink-0 rounded-lg border border-line text-lg" type="button" title="Joindre une image ou un fichier" aria-label="Joindre un fichier" disabled>＋</button>
           <input id="message" class="h-[38px] min-w-0 flex-1 rounded-lg border border-line bg-canvas px-3 text-[13px] placeholder:text-muted" aria-label="Écrire un message" placeholder="Écrire un message…" maxlength="4000" disabled>
           <button id="send" class="primary h-[38px] w-[103px] shrink-0 text-[13px]" type="submit" disabled>Envoyer&nbsp; ↗</button>
         </form>

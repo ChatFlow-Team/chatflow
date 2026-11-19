@@ -25,5 +25,7 @@ public final class SocketService {
     public List<Map<String,Object>> conversations(String token)throws IOException{return transport.conversations(token);}
     public List<Map<String,Object>> messages(String token,long id)throws IOException{return transport.messages(token,id);}
     public Map<String,Object> sendMessage(String token,long id,String body)throws IOException{return transport.sendMessage(token,id,body);}
+    public Map<String,Object> uploadAttachment(String token,long id,String name,String mime,String data)throws IOException{return transport.uploadAttachment(token,id,name,mime,data);}
+    public Map<String,Object> downloadAttachment(String token,long blobId)throws IOException{return transport.downloadAttachment(token,blobId);}
     public SocketClient.EventConnection listenEvents(String token, Consumer<Map<String,Object>> onEvent, Consumer<Exception> onError){return transport.listenEvents(token,onEvent,onError);}
 }

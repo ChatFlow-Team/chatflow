@@ -75,6 +75,15 @@ public final class SocketClient {
         return object("SEND_MESSAGE", token, Long.toString(conversation), content);
     }
 
+    public Map<String, Object> uploadAttachment(String token, long conversation, String filename,
+                                               String contentType, String base64Data) throws IOException {
+        return object("UPLOAD_ATTACHMENT", token, Long.toString(conversation), filename, contentType, base64Data);
+    }
+
+    public Map<String, Object> downloadAttachment(String token, long blobId) throws IOException {
+        return object("DOWNLOAD_ATTACHMENT", token, Long.toString(blobId));
+    }
+
     public void logout(String token) {
         try {
             raw("LOGOUT", token);
@@ -188,7 +197,7 @@ public final class SocketClient {
         }
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(HOST, PORT), 4000);
-            socket.setSoTimeout(12000);
+            socket.setSoTimeout(120000);
             try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                     socket.getOutputStream(), StandardCharsets.UTF_8));
                  BufferedReader reader = new BufferedReader(new InputStreamReader(

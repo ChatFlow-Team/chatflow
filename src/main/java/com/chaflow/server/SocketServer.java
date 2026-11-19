@@ -11,6 +11,7 @@ import com.chaflow.server.repository.JdbcChatRepository;
 import com.chaflow.server.repository.JdbcUserRepository;
 import com.chaflow.server.config.ServerConfig;
 import com.chaflow.server.socket.ClientConnectionRegistry;
+import com.chaflow.server.storage.StorageService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
@@ -31,6 +32,7 @@ public final class SocketServer {
     private static final Base64.Decoder DEC = Base64.getUrlDecoder();
     private static final ConcurrentMap<String, Long> SESSIONS = new ConcurrentHashMap<>();
     private static final ClientConnectionRegistry CONNECTIONS = new ClientConnectionRegistry();
+    private static final StorageService STORAGE = new StorageService(Database.getDataSource());
 
     public static void main(String[] args) throws Exception {
         Database.migrate();
@@ -46,7 +48,7 @@ public final class SocketServer {
         try (socket;
              BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
-            socket.setSoTimeout(15000);
+            socket.setSoTimeout(120000);
             String request = reader.readLine();
             if (request != null && request.startsWith("EVENTS\t")) {
                 handleEventConnection(socket, reader, writer, request);
@@ -123,6 +125,20 @@ public final class SocketServer {
                             CONNECTIONS.publish(recipientId, event);
                         }
                         yield message;
+                    }
+                    case "UPLOAD_ATTACHMENT" -> {
+                        require(f,6);
+                        long conversationId = Long.parseLong(dec(f[2]));
+                        byte[] bytes = Base64.getDecoder().decode(dec(f[5]));
+                        Map<String,Object> uploaded = STORAGE.upload(me, conversationId, dec(f[3]), dec(f[4]), bytes);
+                        Map<String,Object> event = Map.of("event","MESSAGE_RECEIVED",
+                                "data",Map.of("conversationId",conversationId,"message",uploaded));
+                        for (Long recipientId : CHAT.activeParticipantIds(me, conversationId)) CONNECTIONS.publish(recipientId,event);
+                        yield uploaded;
+                    }
+                    case "DOWNLOAD_ATTACHMENT" -> {
+                        require(f,3);
+                        yield STORAGE.download(me, Long.parseLong(dec(f[2])));
                     }
                     case "LOGOUT" -> {
                         String token = dec(f[1]);
